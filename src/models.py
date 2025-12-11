@@ -1,5 +1,7 @@
 #(.venv) PS C:\Users\Home\PycharmProjects\fastApiProject> sqlacodegen postgresql://postgres:IAnAFRyJnFpWsmUGiVLdfohFPCedaXDN@hopper.proxy.rlwy.net:44865/railway
 #Ми використали цю команду в терміналі що б отримати на основі нашої бази данних гогтовий пайтон скрипт , можливо далі може його змінимо але як факт поки так
+#Також хочу зазначити що на помент коміту а саме 12.11.2025 у нас кінчається пробний період на сервер railway тож.. скоріше за все попередня команда буде трохі не актуальна 
+
 
 from typing import Optional
 import datetime
