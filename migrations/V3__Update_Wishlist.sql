@@ -1,0 +1,5 @@
+ALTER TABLE  wishlist 
+ADD COLUMN added_date TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE  wishlist 
+ADD COLUMN  for_delete int not null 
