@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from src.routers import books
+from src.routers import patron
 from src.database import get_db
 
 app = FastAPI()
@@ -15,6 +16,7 @@ def health_check(db: Session = Depends(get_db)):
         return {"status": "error", "details": str(e)}
     
 app.include_router(books.router)
+app.include_router(patron.router)
 
 @app.get("/")
 def root():
