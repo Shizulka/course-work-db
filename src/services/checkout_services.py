@@ -56,10 +56,7 @@ class CheckoutService:
             raise HTTPException(status_code=404, detail="Inventory record not found for this book")
         
         if inventory_record.available < 1:
-             raise HTTPException(
-                status_code=409, 
-                detail="No books available. Join waitlist."
-            )
+             raise HTTPException(  status_code=409,   detail="No books available. Join waitlist.")
         
         new_checkout = Checkout(
             book_copy_id=inventory_record.book_copy_id,

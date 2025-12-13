@@ -1,5 +1,4 @@
-import datetime
-
+from datetime import datetime
 from sqlalchemy import func
 from src.models import Waitlist
 from src.repositories.ult_repository import UltRepository
@@ -8,10 +7,10 @@ class WaitlistRepository(UltRepository):
     def __init__(self, db):
         super().__init__(db, Waitlist)
 
-    def count_ahead (self , book_id : int , patron_id : int , now: datetime ):
+    def count_ahead(self, book_id: int, cut_off_time: datetime):
         return self.db.query(func.count(Waitlist.waitlist_id)).filter(
             Waitlist.book_id == book_id,
-            Waitlist.created_at < now
+            Waitlist.created_at < cut_off_time 
         ).scalar()
 
     def get_by_patron_and_book(self, patron_id: int, book_id: int):

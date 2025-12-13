@@ -1,14 +1,16 @@
 from fastapi import HTTPException
 from src.repositories.waitlist_repository import WaitlistRepository
+from src.repositories.copy_book_repository import BookCopyRepository
 from src.models import Waitlist
 
 class WaitlistService:
-    def __init__(self , repo : WaitlistRepository):
-        self.repo = repo
+    def __init__(self , repo : WaitlistRepository , book_copy_repo: BookCopyRepository):
+        self.repo = repo,
+        self.book_copy_repo = book_copy_repo
 
     def get_waitlist_list(self):
         waitlist= self.repo.get_all
-
+        
         if not waitlist:
             return []
         return waitlist
@@ -24,7 +26,11 @@ class WaitlistService:
         return count + 1
     
     def create_waitlist(self, book_id: int, patron_id: int ) :
-    
+        inventory = self.book_copy_repo.get_by_book_id(book_id)
+
+        if inventory.available > 0:
+            raise HTTPException( status_code=400,   detail="Books are available! You can checkout directly instead of joining waitlist." )
+
         new_waitlist = Waitlist(
             book_id=book_id , 
             patron_id=patron_id)
