@@ -1,10 +1,10 @@
 from fastapi import HTTPException
-from src.repositories.patron_repositories import PatronRepositories
+from repositories.patron_repository import PatronRepository
 from src.models import Patron
 import re
 
 class PatronService:
-    def __init__(self , repo : PatronRepositories):
+    def __init__(self , repo : PatronRepository):
         self.repo = repo
 
     def get_patron_list(self):
@@ -18,13 +18,13 @@ class PatronService:
         email_pattern = "^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$"
 
         if len(phone_number) != 10:
-            raise HTTPException(status_code=400, detail="Не правильний формат номеру.")
+            raise HTTPException(status_code=400, detail="Incorrect number format.")
 
         if not phone_number.isdigit():
-             raise HTTPException(status_code=400, detail="Номер телефону має містити тільки цифри.")
+             raise HTTPException(status_code=400, detail="The phone number must contain only digits.")
         
         if not re.match(email_pattern, email):
-            raise HTTPException(status_code=400, detail="Некоректний формат емейлу")
+            raise HTTPException(status_code=400, detail="Incorrect email format")
 
         new_patron = Patron(
             first_name=first_name, 

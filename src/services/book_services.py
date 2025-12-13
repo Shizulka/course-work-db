@@ -1,9 +1,9 @@
 from fastapi import HTTPException
-from src.repositories.book_repositories import BookRepositories
+from repositories.book_repository import BookRepository
 from src.models import Book
 
 class BookService:
-    def __init__(self , repo : BookRepositories):
+    def __init__(self , repo : BookRepository):
         self.repo = repo
 
     def get_book_list(self):
@@ -17,7 +17,7 @@ class BookService:
     
 
         if pages <= 0:
-             raise HTTPException(status_code=400, detail="Сторінок має бути більше 0")
+             raise HTTPException(status_code=400, detail="There must be more than 0 pages")
         
 
         new_book = Book(

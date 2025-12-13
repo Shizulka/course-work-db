@@ -1,11 +1,13 @@
 from fastapi import HTTPException
-from src.repositories.checkout_repositories import CheckoutRepositories
-from src.models import Checkout
+from models import Checkout
+from repositories.checkout_repository import CheckoutRepository
+from repositories.copy_book_repository import BookCopyRepository
 from datetime import datetime , timedelta
 
 class CheckoutService:
-    def __init__(self, repo: CheckoutRepositories):
+    def __init__(self, repo: CheckoutRepository, book_copy_repo: BookCopyRepository):
         self.repo = repo
+        self.book_copy_repo = book_copy_repo
 
     def _update(self, checkout: Checkout):
 
@@ -27,42 +29,40 @@ class CheckoutService:
                 checkout.status = "OK"
 
     def get_checkout_list(self):
-        # 1. Беремо дані
-        checkouts = self.repo.get_all()
-        print(f"--- ПОЧАТОК ПЕРЕВІРКИ: Знайдено {len(checkouts)} записів ---")
+        checkout = self.repo.get_all
 
-        if not checkouts:
+        if not checkout:
             return []
-        
-        # 2. Оновлюємо кожен запис
-        for item in checkouts:
-            old_status = item.status
-            self._update(item) # Викликаємо логіку перевірки дати
-            
-            # Пишемо в термінал, якщо статус змінився
-            if old_status != item.status:
-                print(f"🔄 ID {item.checkout_id}: Зміна статусу '{old_status}' -> '{item.status}'")
-            else:
-                print(f"⏹️ ID {item.checkout_id}: Статус без змін ({item.status})")
-        
-        # 3. ПРИМУСОВЕ ЗБЕРЕЖЕННЯ
-        try:
-            self.repo.db.commit()
-            print("✅ Зміни успішно збережено в базу (COMMIT виконано)")
-        except Exception as e:
-            print(f"❌ ПОМИЛКА ЗБЕРЕЖЕННЯ: {e}")
-
-        return checkouts
+        return checkout
     
     
-    def create_checkout(self, book_copy_id: int, patron_id: int, end_time: datetime):
-        
+    
+    def create_checkout(self, book_id: int, book_copy_id: int, patron_id: int, end_time: datetime):
         if not end_time:
             raise HTTPException(status_code=400, detail="End time is required")
         
         if end_time < datetime.now():
             raise HTTPException(status_code=400, detail="End time cannot be in the past")
         
-        new_checkout = Checkout( book_copy_id=book_copy_id, patron_id=patron_id,end_time=end_time )
-    
-        return self.repo.create(new_checkout)
+        inventory_record = self.book_copy_repo.get_by_book_id(book_id)
+        
+        if not inventory_record:
+            raise HTTPException(status_code=404, detail="Inventory record not found for this book")
+        
+        if inventory_record.available < 1:
+             raise HTTPException(
+                status_code=409, 
+                detail="No books available. Join waitlist."
+            )
+        
+        new_checkout = Checkout(
+            book_copy_id=inventory_record.id, 
+            patron_id=patron_id,
+            end_time=end_time
+        )
+
+        inventory_record.available -= 1
+
+        self.repo.create(new_checkout)
+        
+        return new_checkout

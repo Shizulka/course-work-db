@@ -116,7 +116,8 @@ class BookCopy(Base):
     )
 
     book_copy_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    copy_number: Mapped[str] = mapped_column(String(255), nullable=False)
+    copy_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    available : Mapped[int] = mapped_column(Integer, nullable=False)
     book_id: Mapped[Optional[int]] = mapped_column(Integer)
 
     book: Mapped[Optional['Book']] = relationship('Book', back_populates='book_copy')
@@ -153,11 +154,13 @@ class Waitlist(Base):
         ForeignKeyConstraint(['book_id'], ['book.book_id'], name='waitlist_book_id_fkey'),
         ForeignKeyConstraint(['patron_id'], ['patron.patron_id'], name='waitlist_patron_id_fkey'),
         PrimaryKeyConstraint('waitlist_id', name='waitlist_pkey')
+
     )
 
     waitlist_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     patron_id: Mapped[Optional[int]] = mapped_column(Integer)
     book_id: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at:  Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
     book: Mapped[Optional['Book']] = relationship('Book', back_populates='waitlist')
     patron: Mapped[Optional['Patron']] = relationship('Patron', back_populates='waitlist')
@@ -174,7 +177,7 @@ class Wishlist(Base):
     wishlist_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     patron_id: Mapped[int] = mapped_column(Integer, nullable=False)
     book_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    added_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
+    created_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
     book: Mapped['Book'] = relationship('Book', back_populates='wishlist')
     patron: Mapped['Patron'] = relationship('Patron', back_populates='wishlist')

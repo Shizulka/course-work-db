@@ -1,0 +1,9 @@
+from src.models import BookCopy
+from repositories.ult_repository import UltRepository
+
+class BookCopyRepository(UltRepository):
+    def __init__(self, db):
+        super().__init__(db, BookCopy)
+
+    def get_by_book_id(self, book_id: int):
+        return self.db.query(BookCopy).filter(BookCopy.book_id == book_id).first()
