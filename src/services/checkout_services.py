@@ -1,8 +1,10 @@
 from fastapi import HTTPException
+from datetime import datetime , timedelta
+
 from src.models import Checkout
 from src.repositories.checkout_repository import CheckoutRepository
 from src.repositories.copy_book_repository import BookCopyRepository
-from datetime import datetime , timedelta
+
 
 class CheckoutService:
     def __init__(self, repo: CheckoutRepository, book_copy_repo: BookCopyRepository):
@@ -29,15 +31,19 @@ class CheckoutService:
                 checkout.status = "OK"
 
     def get_checkout_list(self):
-        checkout = self.repo.get_all
+        checkouts = self.repo.get_all() 
 
-        if not checkout:
+        if not checkouts:
             return []
-        return checkout
+
+        for item in checkouts:
+            self._update(item)
+        self.repo.db.commit()
+
+        return checkouts
     
     
-    
-    def create_checkout(self, book_id: int, book_copy_id: int, patron_id: int, end_time: datetime):
+    def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):
         if not end_time:
             raise HTTPException(status_code=400, detail="End time is required")
         
@@ -56,7 +62,7 @@ class CheckoutService:
             )
         
         new_checkout = Checkout(
-            book_copy_id=inventory_record.id, 
+            book_copy_id=inventory_record.book_copy_id,
             patron_id=patron_id,
             end_time=end_time
         )
