@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from repositories.patron_repository import PatronRepository
+from src.repositories.patron_repository import PatronRepository
 from src.models import Patron
 import re
 

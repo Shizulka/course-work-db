@@ -1,5 +1,5 @@
 from src.models import BookCopy
-from repositories.ult_repository import UltRepository
+from src.repositories.ult_repository import UltRepository
 
 class BookCopyRepository(UltRepository):
     def __init__(self, db):

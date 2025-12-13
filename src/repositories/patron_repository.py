@@ -1,6 +1,6 @@
 
 from src.models import Patron
-from repositories.ult_repository import UltRepository
+from src.repositories.ult_repository import UltRepository
 
 class PatronRepository(UltRepository):
     def __init__(self, db):

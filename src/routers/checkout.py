@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from src.database import get_db
-from repositories.checkout_repository import CheckoutRepository
+from src.repositories.checkout_repository import CheckoutRepository
 from src.services.checkout_services import CheckoutService
-from repositories.copy_book_repository import BookCopyRepository
+from src.repositories.copy_book_repository import BookCopyRepository
 
 router = APIRouter(prefix="/checkout", tags=["Checkout"])
 

@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from repositories.book_repository import BookRepository
+from src.repositories.book_repository import BookRepository
 from src.models import Book
 
 class BookService:

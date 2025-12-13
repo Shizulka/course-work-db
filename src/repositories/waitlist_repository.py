@@ -2,7 +2,7 @@ import datetime
 
 from sqlalchemy import func
 from src.models import Waitlist
-from repositories.ult_repository import UltRepository
+from src.repositories.ult_repository import UltRepository
 
 class WaitlistRepository(UltRepository):
     def __init__(self, db):

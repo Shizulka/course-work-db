@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.database import get_db
-from repositories.patron_repository import PatronRepository
+from src.repositories.patron_repository import PatronRepository
 from src.services.patron_services import PatronService
 
 router = APIRouter(prefix="/patrons", tags=["Patrons"])

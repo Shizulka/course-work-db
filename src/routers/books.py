@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.database import get_db
-from repositories.book_repository import BookRepository
+from src.repositories.book_repository import BookRepository
 from src.services.book_services import BookService
 
 router = APIRouter(prefix="/books", tags=["Books"])

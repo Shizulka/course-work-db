@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from repositories.waitlist_repository import WaitlistRepository
+from src.repositories.waitlist_repository import WaitlistRepository
 from src.models import Waitlist
 
 class WaitlistService:

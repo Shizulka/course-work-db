@@ -1,7 +1,7 @@
 from fastapi import HTTPException
-from models import Checkout
-from repositories.checkout_repository import CheckoutRepository
-from repositories.copy_book_repository import BookCopyRepository
+from src.models import Checkout
+from src.repositories.checkout_repository import CheckoutRepository
+from src.repositories.copy_book_repository import BookCopyRepository
 from datetime import datetime , timedelta
 
 class CheckoutService:
@@ -60,9 +60,7 @@ class CheckoutService:
             patron_id=patron_id,
             end_time=end_time
         )
-
-        inventory_record.available -= 1
-
         self.repo.create(new_checkout)
-        
+        inventory_record.available -= 1
+        self.repo.db.commit()
         return new_checkout

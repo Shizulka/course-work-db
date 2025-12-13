@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.database import get_db
-from repositories.waitlist_repository import WaitlistRepository
+from src.repositories.waitlist_repository import WaitlistRepository
 from src.services.waitlist_services import WaitlistService
 
 router = APIRouter(prefix="/waitlist", tags=["Waitlist"])
