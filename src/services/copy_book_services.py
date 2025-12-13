@@ -16,6 +16,15 @@ class BookCopyService:
 
     
     def create_book(self, book_id: int , copy_number: int , available :int  ):
+
+        if copy_number < 0:
+             raise HTTPException(status_code=400,detail="The number of books cannot be less than 0." )
+        
+        if  copy_number < available:
+            raise HTTPException(status_code=400,detail="The number of available books cannot exceed the total number" )
+        
+        if available < 0:
+             raise HTTPException(status_code=400,detail="The number of books cannot be less than 0." )
     
         new_copy_book = BookCopy ( 
           book_id=book_id,

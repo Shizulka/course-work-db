@@ -21,7 +21,7 @@ class PatronService:
             raise HTTPException(status_code=400, detail="Incorrect number format.")
 
         if not phone_number.isdigit():
-             raise HTTPException(status_code=400, detail="The phone number must contain only digits.")
+             raise HTTPException(status_code=400, detail="The phone number must contain only numbers.")
         
         if not re.match(email_pattern, email):
             raise HTTPException(status_code=400, detail="Incorrect email format")
