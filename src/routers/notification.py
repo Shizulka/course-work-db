@@ -23,8 +23,3 @@ def get_my_notifications(patron_id: int, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[NotificationResponse])
 def get_notification(service: NotificationService = Depends(get_notification_service)):
     return service.get_notification_list()
-
-@router.post("/")
-def add_notification(  contents: str ,  patron_id: int ,  service: NotificationService = Depends(get_notification_service)):
-    return service.create_notification(  contents= contents , patron_id= patron_id  ) 
-

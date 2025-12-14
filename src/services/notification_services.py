@@ -8,18 +8,4 @@ class NotificationService:
         self.repo = repo
 
     def get_notification_list(self):
-        notification = self.repo.get_all
-
-        if not notification:
-            return []
-        return notification
-    
-    def create_notification(self,contents: str ,  patron_id: int) :
-        
-
-        new_notification=Notification(
-            contents= contents , 
-            patron_id= patron_id  
-            )
-    
-        return self.repo.create(new_notification)
+        return self.repo.get_all
