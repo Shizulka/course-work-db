@@ -1,6 +1,5 @@
 #(.venv) PS C:\Users\Home\PycharmProjects\fastApiProject> sqlacodegen postgresql://postgres:IAnAFRyJnFpWsmUGiVLdfohFPCedaXDN@hopper.proxy.rlwy.net:44865/railway
 #Ми використали цю команду в терміналі що б отримати на основі нашої бази данних гогтовий пайтон скрипт , можливо далі може його змінимо але як факт поки так
-#Також хочу зазначити що на помент коміту а саме 11.12.2025 у нас кінчається пробний період на сервер railway тож.. скоріше за все попередня команда буде трохі не актуальна 
 
 
 from typing import Optional
@@ -113,6 +112,10 @@ t_author_book = Table(
 class BookCopy(Base):
     __tablename__ = 'book_copy'
     __table_args__ = (
+        CheckConstraint(
+            'available >= 0 AND available <= copy_number',
+            name='book_copy_available_check'
+        ),
         ForeignKeyConstraint(['book_id'], ['book.book_id'], name='book_copy_book_id_fkey'),
         PrimaryKeyConstraint('book_copy_id', name='book_copy_pkey')
     )
@@ -120,7 +123,7 @@ class BookCopy(Base):
     book_copy_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     copy_number: Mapped[int] = mapped_column(Integer, nullable=False)
     available : Mapped[int] = mapped_column(Integer, nullable=False)
-    book_id: Mapped[Optional[int]] = mapped_column(Integer)
+    book_id: Mapped[int] = mapped_column(Integer) #я прибрала optional, бо як айдішник може бути опціональним
 
     book: Mapped[Optional['Book']] = relationship('Book', back_populates='book_copy')
     checkout: Mapped[list['Checkout']] = relationship('Checkout', back_populates='book_copy')
@@ -145,7 +148,7 @@ class Notification(Base):
 
     notification_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     contents: Mapped[str] = mapped_column(Text, nullable=False)
-    patron_id: Mapped[Optional[int]] = mapped_column(Integer)
+    patron_id: Mapped[int] = mapped_column(Integer)
 
     patron: Mapped[Optional['Patron']] = relationship('Patron', back_populates='notification')
 
@@ -153,6 +156,11 @@ class Notification(Base):
 class Waitlist(Base):
     __tablename__ = 'waitlist'
     __table_args__ = (
+        UniqueConstraint(
+            'patron_id',
+            'book_id',
+            name='uq_waitlist_patron_book'
+        ),
         ForeignKeyConstraint(['book_id'], ['book.book_id'], name='waitlist_book_id_fkey'),
         ForeignKeyConstraint(['patron_id'], ['patron.patron_id'], name='waitlist_patron_id_fkey'),
         PrimaryKeyConstraint('waitlist_id', name='waitlist_pkey')
@@ -160,8 +168,8 @@ class Waitlist(Base):
     )
 
     waitlist_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    patron_id: Mapped[Optional[int]] = mapped_column(Integer)
-    book_id: Mapped[Optional[int]] = mapped_column(Integer)
+    patron_id: Mapped[int] = mapped_column(Integer)
+    book_id: Mapped[int] = mapped_column(Integer)
     created_at:  Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
     book: Mapped[Optional['Book']] = relationship('Book', back_populates='waitlist')
@@ -197,9 +205,9 @@ class Checkout(Base):
     checkout_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     start_time: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     status: Mapped[str] = mapped_column(Enum('Overdue', 'Soon', 'OK', name='status_type'), nullable=False, server_default=text("'OK'::status_type"))
-    book_copy_id: Mapped[Optional[int]] = mapped_column(Integer)
-    patron_id: Mapped[Optional[int]] = mapped_column(Integer)
-    end_time: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    book_copy_id: Mapped[int] = mapped_column(Integer)
+    patron_id: Mapped[int] = mapped_column(Integer)
+    end_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
     book_copy: Mapped[Optional['BookCopy']] = relationship('BookCopy', back_populates='checkout')
     patron: Mapped[Optional['Patron']] = relationship('Patron', back_populates='checkout')
