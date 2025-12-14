@@ -192,6 +192,7 @@ class Wishlist(Base):
     added_date: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
     patron: Mapped['Patron'] = relationship('Patron', back_populates='wishlist')
+    author: Mapped[list['Author']] = relationship('Author', secondary='author_book', back_populates='book')
 
 
 class Checkout(Base):
