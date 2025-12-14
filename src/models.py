@@ -29,7 +29,8 @@ class Book(Base):
     __tablename__ = 'book'
     __table_args__ = (
         CheckConstraint('pages > 0', name='book_pages_check'),
-        PrimaryKeyConstraint('book_id', name='book_pkey')
+        PrimaryKeyConstraint('book_id', name='book_pkey'),
+        UniqueConstraint('title', 'language', 'publisher', 'year_published', name='uq_book_identity')
     )
 
     book_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -43,26 +44,26 @@ class Book(Base):
     genre: Mapped[list['Genre']] = relationship('Genre', secondary='book_genres', back_populates='book')
     book_copy: Mapped[list['BookCopy']] = relationship('BookCopy', back_populates='book')
     waitlist: Mapped[list['Waitlist']] = relationship('Waitlist', back_populates='book')
-    wishlist: Mapped[list['Wishlist']] = relationship('Wishlist', back_populates='book')
+   
 
+#поки хай буде коментарем ,подумаю чи треба взагалі воно
+#class FlywaySchemaHistory(Base):
+   # __tablename__ = 'flyway_schema_history'
+   # __table_args__ = (
+    #    PrimaryKeyConstraint('installed_rank', name='flyway_schema_history_pk'),
+   #     Index('flyway_schema_history_s_idx', 'success')
+    #)
 
-class FlywaySchemaHistory(Base):
-    __tablename__ = 'flyway_schema_history'
-    __table_args__ = (
-        PrimaryKeyConstraint('installed_rank', name='flyway_schema_history_pk'),
-        Index('flyway_schema_history_s_idx', 'success')
-    )
-
-    installed_rank: Mapped[int] = mapped_column(Integer, primary_key=True)
-    description: Mapped[str] = mapped_column(String(200), nullable=False)
-    type: Mapped[str] = mapped_column(String(20), nullable=False)
-    script: Mapped[str] = mapped_column(String(1000), nullable=False)
-    installed_by: Mapped[str] = mapped_column(String(100), nullable=False)
-    installed_on: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'))
-    execution_time: Mapped[int] = mapped_column(Integer, nullable=False)
-    success: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    version: Mapped[Optional[str]] = mapped_column(String(50))
-    checksum: Mapped[Optional[int]] = mapped_column(Integer)
+    #installed_rank: Mapped[int] = mapped_column(Integer, primary_key=True)
+    #description: Mapped[str] = mapped_column(String(200), nullable=False)
+    #type: Mapped[str] = mapped_column(String(20), nullable=False)
+    #script: Mapped[str] = mapped_column(String(1000), nullable=False)
+    #installed_by: Mapped[str] = mapped_column(String(100), nullable=False)
+    #installed_on: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'))
+    #execution_time: Mapped[int] = mapped_column(Integer, nullable=False)
+    #success: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    #version: Mapped[Optional[str]] = mapped_column(String(50))
+    #checksum: Mapped[Optional[int]] = mapped_column(Integer)
 
 
 class Genre(Base):
@@ -84,7 +85,8 @@ class Patron(Base):
         CheckConstraint("email::text ~* '^[A-Za-z0-9._+%%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$'::text", name='email'),
         CheckConstraint("length(phone_number::text) = 10 AND phone_number::text ~ '^[0-9]+$'::text", name='phone_number'),
         PrimaryKeyConstraint('patron_id', name='patron_pkey'),
-        UniqueConstraint('email', name='patron_email_key')
+        UniqueConstraint('email', name='patron_email_key'),
+        UniqueConstraint('first_name', 'last_name', 'phone_number', name='uq_patron_identity')
     )
 
     patron_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -169,17 +171,18 @@ class Waitlist(Base):
 class Wishlist(Base):
     __tablename__ = 'wishlist'
     __table_args__ = (
-        ForeignKeyConstraint(['book_id'], ['book.book_id'], name='wishlist_book_id_fkey'),
         ForeignKeyConstraint(['patron_id'], ['patron.patron_id'], name='wishlist_patron_id_fkey'),
         PrimaryKeyConstraint('wishlist_id', name='wishlist_pkey')
     )
 
     wishlist_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     patron_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    book_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    language: Mapped[str] = mapped_column(String(255), nullable=False)
+    publisher: Mapped[str] = mapped_column(String(50), nullable=False, server_default=text("'Невідомо'::character varying"))
+    year_published: Mapped[Optional[int]] = mapped_column(Integer)
+    added_date: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
-    book: Mapped['Book'] = relationship('Book', back_populates='wishlist')
     patron: Mapped['Patron'] = relationship('Patron', back_populates='wishlist')
 
 

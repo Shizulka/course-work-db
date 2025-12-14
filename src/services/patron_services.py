@@ -1,3 +1,4 @@
+from sqlite3 import IntegrityError
 from fastapi import HTTPException
 from src.repositories.patron_repository import PatronRepository
 from src.models import Patron
@@ -33,4 +34,8 @@ class PatronService:
             phone_number=phone_number
         )
     
-        return self.repo.create(new_patron)
+        try:
+             self.repo.create(new_patron)
+             return {"message": "The patron has successfully added"}
+        except IntegrityError:
+             raise HTTPException(status_code=400, detail="This patron already exists")

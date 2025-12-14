@@ -1,3 +1,4 @@
+from sqlite3 import IntegrityError
 from fastapi import HTTPException
 from src.repositories.book_repository import BookRepository
 from src.models import Book
@@ -13,7 +14,7 @@ class BookService:
             return []
         return book
     
-    def create_book(self, title: str, pages: int, publisher: str, language: str, year_published: str) :
+    def create_book(self, patron_id:int , title: str, pages: int, publisher: str, language: str, year_published: str) :
     
 
         if pages <= 0:
@@ -21,11 +22,15 @@ class BookService:
         
 
         new_book = Book(
-            title=title, 
-            pages=pages, 
-            publisher=publisher, 
-            language=language,
+            patron_id=patron_id , 
+            title=title ,  
+            publisher=publisher ,
+            language=language , 
             year_published=year_published
         )
     
-        return self.repo.create(new_book)
+        try:
+             self.repo.create(new_book)
+             return {"message": "The book has been successfully added"}
+        except IntegrityError:
+             raise HTTPException(status_code=400, detail="This book already exists")

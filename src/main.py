@@ -8,6 +8,8 @@ from src.routers import waitlist
 from src.routers import copy_book
 from src.routers import author
 from src.routers import genre
+from src.routers import wishlist
+from src.routers import relations
 from src.database import get_db
 
 app = FastAPI()
@@ -27,6 +29,8 @@ app.include_router(waitlist.router)
 app.include_router(copy_book.router)
 app.include_router(author.router)
 app.include_router(genre.router)
+app.include_router(wishlist.router)
+app.include_router(relations.router)
 
 @app.get("/")
 def root():
