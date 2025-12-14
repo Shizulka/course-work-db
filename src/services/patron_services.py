@@ -1,4 +1,4 @@
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from src.repositories.patron_repository import PatronRepository
 from src.models import Patron
@@ -7,13 +7,11 @@ import re
 class PatronService:
     def __init__(self , repo : PatronRepository):
         self.repo = repo
+        self.db = repo.db
 
     def get_patron_list(self):
-        patron = self.repo.get_all
-
-        if not patron:
-            return []
-        return patron
+        patron = self.repo.get_all()
+        return patrons or []
     
     def create_patron(self, first_name: str, last_name: str, email: str, phone_number: str ) :
         email_pattern = "^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$"
@@ -35,7 +33,13 @@ class PatronService:
         )
     
         try:
-             self.repo.create(new_patron)
-             return {"message": "The patron has successfully added"}
+            self.db.add(new_patron)
+            self.db.commit()
+            self.db.refresh(new_patron)
+            return {
+                "message": "The patron has successfully added",
+                "patron": new_patron
+            }
+            
         except IntegrityError:
              raise HTTPException(status_code=400, detail="This patron already exists")
