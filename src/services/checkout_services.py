@@ -62,11 +62,16 @@ class CheckoutService:
         except IntegrityError:
             raise HTTPException(400, "Checkout failed due to data integrity error")
         
-    def get_checkout_list(self):
-        checkouts = self.repo.get_all() 
+    def get_checkout_list(self, patron_id: int, book_id: int | None = None):
+        query = (
+            self.db.query(Checkout)
+            .filter(Checkout.patron_id == patron_id)
+        )
 
-        if not checkouts:
-            return []
+        if book_id is not None:
+            query = query.join(BookCopy).filter(BookCopy.book_id == book_id)
+
+        checkouts = query.all()
 
         for checkout in checkouts:
             self._update_status(checkout)

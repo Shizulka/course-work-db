@@ -15,10 +15,16 @@ def get_checkout_service(db: Session = Depends(get_db)) -> CheckoutService:
     book_copy_repo = BookCopyRepository(db) 
     return CheckoutService(repo=repo, book_copy_repo=book_copy_repo)
 
-
-@router.get("/")
-def get_checkouts(service: CheckoutService = Depends(get_checkout_service)):
-    return service.get_checkout_list()
+@router.get("/", response_model=list[CheckoutResponse])
+def get_checkouts(
+    patron_id: int,
+    book_id: int | None = None,
+    service: CheckoutService = Depends(get_checkout_service),
+):
+    return service.get_checkout_list(
+        patron_id=patron_id,
+        book_id=book_id
+    )
 
 @router.post("/", response_model=CheckoutResponse)
 def add_checkout(book_id: int,  patron_id: int,   end_time: datetime,  service: CheckoutService = Depends(get_checkout_service)):
