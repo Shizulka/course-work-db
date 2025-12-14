@@ -13,10 +13,7 @@ class UltRepository:
 
     def create(self, obj_data):
         self.db.add(obj_data)
-        self.db.commit()
-        self.db.refresh(obj_data)
         return obj_data
 
     def delete(self, obj):
         self.db.delete(obj)
-        self.db.commit()
