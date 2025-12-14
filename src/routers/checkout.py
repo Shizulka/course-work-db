@@ -3,8 +3,6 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from src.schemas import CheckoutResponse
-from src.repositories.notification_repository import NotificationRepository
-from src.services.notification_services import NotificationService
 from src.database import get_db
 from src.repositories.checkout_repository import CheckoutRepository
 from src.services.checkout_services import CheckoutService
@@ -15,9 +13,7 @@ router = APIRouter(prefix="/checkout", tags=["Checkout"])
 def get_checkout_service(db: Session = Depends(get_db)) -> CheckoutService:
     repo = CheckoutRepository(db)
     book_copy_repo = BookCopyRepository(db) 
-    notification_repo = NotificationRepository(db)
-    notification_service = NotificationService(notification_repo)
-    return CheckoutService(repo=repo, book_copy_repo=book_copy_repo, notification_service=notification_service)
+    return CheckoutService(repo=repo, book_copy_repo=book_copy_repo)
 
 
 @router.get("/")
