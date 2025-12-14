@@ -1,7 +1,11 @@
-
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional
+
 
 class NotificationResponse(BaseModel):
     notification_id: int
@@ -21,3 +25,40 @@ class CheckoutResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class BookBase(BaseModel):
+    title: str
+    author: str
+    isbn: str
+    year_published: int
+
+class BookCreate(BookBase):
+    pass
+
+class BookCreateWithCopies(BaseModel):
+    title: str
+    year_published: int
+    pages: int
+    publisher: str
+    language: str
+    quantity: int = 1
+
+class BookCopyResponse(BaseModel):
+    book_copy_id: int
+    copy_number: int
+    class Config:
+        from_attributes = True
+
+class BookResponse(BaseModel):
+    book_id: int
+    title: str
+    year_published: int
+    pages: int
+    publisher: str
+    language: str
+    copy_number: List[BookCopyResponse] = [] 
+    
+    class Config:
+        from_attributes = True
+

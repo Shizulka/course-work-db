@@ -17,8 +17,30 @@ class CheckoutService:
         self.book_copy_repo = book_copy_repo
         self.db: Session = repo.db
 
+    def return_book (self ,  patron_id :int , book_copy_id :int):
+            checkout = self.db.query(Checkout).filter(
+                 Checkout.patron_id == patron_id,
+                 Checkout.book_copy_id == book_copy_id, 
+                 ).first()
+
+            if not checkout:
+                raise HTTPException(status_code=404, detail="No record of issuance found")
+            
+            book_copy = self.db.query(BookCopy)\
+                .filter(BookCopy.book_copy_id == checkout.book_copy_id)\
+                .with_for_update()\
+                .first()
+            
+            if not book_copy:
+                raise HTTPException(status_code=404, detail="No copy of the book found in the database")
+            
+            book_copy.available += 1
+            self.db.delete(checkout)
+            self.db.commit()
+            
+            return {"message": "Книгу успішно повернуто", "new_availability": book_copy.available}
+
     def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):
-        formatted_date = end_time.strftime("%d.%m.%Y")
 
         if not end_time:
             raise HTTPException(status_code=400, detail="End time is required")
