@@ -14,7 +14,7 @@ class BookService:
             return []
         return book
     
-    def create_book(self, patron_id:int , title: str, pages: int, publisher: str, language: str, year_published: str) :
+    def create_book(self, title: str, pages: int, publisher: str, language: str, year_published: str) :
     
 
         if pages <= 0:
@@ -22,8 +22,8 @@ class BookService:
         
 
         new_book = Book(
-            patron_id=patron_id , 
             title=title ,  
+            pages=pages,
             publisher=publisher ,
             language=language , 
             year_published=year_published
