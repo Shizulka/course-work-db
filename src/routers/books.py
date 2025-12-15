@@ -40,13 +40,6 @@ def create_book_batch(
         quantity=quantity
     )
 
-@router.get("/", response_model=List[BookResponse])
-def get_all_books(
-    db: Session = Depends(get_db)
-):
-    from src.models import Book
-    return db.query(Book).all()
-
 @router.post("/")
 def add_book(
     title: str,
@@ -69,3 +62,10 @@ def add_book(
         genres=genres,
         price=price
     )
+
+@router.get("/", response_model=List[BookResponse])
+def get_all_books(
+    db: Session = Depends(get_db)
+):
+    from src.models import Book
+    return db.query(Book).all()
