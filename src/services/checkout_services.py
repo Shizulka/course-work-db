@@ -4,7 +4,7 @@ from datetime import datetime , timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from src.models import Checkout
+from src.models import Book, Checkout
 from src.models import BookCopy
 from src.models import Notification
 from src.repositories.checkout_repository import CheckoutRepository
@@ -12,10 +12,45 @@ from src.repositories.copy_book_repository import BookCopyRepository
 
 
 class CheckoutService:
-    def __init__(self, repo: CheckoutRepository, book_copy_repo: BookCopyRepository):
+    def init(self, repo: CheckoutRepository, book_copy_repo: BookCopyRepository):
         self.repo = repo
         self.book_copy_repo = book_copy_repo
         self.db: Session = repo.db
+
+
+    def lost_book(self, patron_id: int, book_copy_id: int):
+        checkout = self.db.query(Checkout).filter(
+          Checkout.patron_id == patron_id,
+          Checkout.book_copy_id == book_copy_id
+        ).first()
+
+        if not checkout:
+            raise HTTPException(status_code=404, detail="No record of issuance found")
+
+        book_copy = (
+            self.db.query(BookCopy)
+            .filter(BookCopy.book_copy_id == checkout.book_copy_id)
+            .with_for_update()
+            .first()
+        )
+
+        if not book_copy:
+             raise HTTPException(status_code=404, detail="No copy of the book found in the database")
+
+        book = self.db.query(Book).filter(
+             Book.book_id == book_copy.book_id
+        ).first()
+
+        if not book:
+             raise HTTPException(status_code=404, detail="Book not found")
+
+        price = book_copy.book.price
+        self.db.delete(checkout)
+        self.db.commit()
+
+        return {
+             "message": f"Сума штрафу: {price:.2f} грн"
+        }
 
     def return_book (self ,  patron_id :int , book_copy_id :int):
             checkout = self.db.query(Checkout).filter(
@@ -38,7 +73,7 @@ class CheckoutService:
             self.db.delete(checkout)
             self.db.commit()
             
-            return {"message": "Книгу успішно повернуто", "new_availability": book_copy.available}
+            return {"message": "The book has been successfully returned.", "new_availability": book_copy.available}
 
     def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):
 
@@ -73,7 +108,7 @@ class CheckoutService:
                 )
                 self.db.add(new_checkout)
 
-                formatted_date = end_time.strftime("%d.%m.%Y")
+formatted_date = end_time.strftime("%d.%m.%Y")
                 notification = Notification(
                     patron_id=patron_id,
                     contents=f"You have successfully borrowed the book. Please return it by {formatted_date}."
