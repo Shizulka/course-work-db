@@ -18,13 +18,13 @@ def get_book_service(db: Session = Depends(get_db)) -> BookService:
 def create_book_batch(book_data: BookCreateWithCopies, db: Session = Depends(get_db)):
     repo = BookRepository(db)
     service = BookService(db, repo) 
-    
     return service.create_book_with_copies(book_data)
+
 @router.get("/", response_model=List[BookResponse])
 def get_all_books(db: Session = Depends(get_db)):
     from src.models import Book
     return db.query(Book).all()
 
 @router.post("/")
-def add_book(title: str, pages: int, publisher: str,  language: str, year_published: str , service: BookService = Depends(get_book_service)):
-    return service.create_book(title=title, pages=pages , publisher=publisher, language=language , year_published=year_published)
+def add_book(title: str, pages: int, publisher: str,  language: str, year_published:int , price : int , service: BookService = Depends(get_book_service)):
+    return service.create_book(title=title, pages=pages , publisher=publisher, language=language , year_published=year_published , price=price)

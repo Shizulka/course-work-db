@@ -25,7 +25,8 @@ class BookService:
                 year_published=data.year_published,
                 pages=data.pages,
                 publisher=data.publisher,
-                language=data.language
+                language=data.language,
+                price=getattr(data, "price", 0)
             )
             self.db.add(new_book)
             
@@ -47,18 +48,22 @@ class BookService:
             raise HTTPException(status_code=400, detail="This book already exists")
 
 
-    def create_book(self, title: str, pages: int, publisher: str, language: str, year_published: str) :
+    def create_book(self, title: str, pages: int, publisher: str, language: str, year_published: int , price : int) :
     
 
         if pages <= 0:
              raise HTTPException(status_code=400, detail="There must be more than 0 pages")
         
-
+        if price < 0:
+             raise HTTPException(status_code=400, detail="Price cannot be negative")
+    
         new_book = Book( 
             title=title ,  
             publisher=publisher ,
             language=language , 
-            year_published=year_published
+            year_published=year_published,
+            pages=pages,
+            price = price 
         )
     
         try:
