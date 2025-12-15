@@ -24,8 +24,8 @@ class Author(Base):
     book: Mapped[list['Book']] = relationship('Book', secondary='author_book', back_populates='author')
 
 class Book(Base):
-    tablename = 'book'
-    table_args = (
+    __tablename__ = 'book'
+    __table_args__ = (
         CheckConstraint('pages > 0', name='book_pages_check'),
         PrimaryKeyConstraint('book_id', name='book_pkey'),
         UniqueConstraint('title', 'language', 'publisher', 'year_published', name='uq_book_identity')
