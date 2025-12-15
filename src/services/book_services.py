@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from src.schemas import BookCreateWithCopies
 from src.repositories.book_repository import BookRepository
-from src.models import Book, BookCopy
+from src.models import Book, BookCopy, Author, Genre
 
 class BookService:
     def __init__(self, db: Session, repo: BookRepository):
@@ -17,60 +17,142 @@ class BookService:
             return []
         return book
     
-    def create_book_with_copies(self, data: BookCreateWithCopies):
+    def create_book_with_copies(
+        self,
+        title: str,
+        year_published: int,
+        pages: int,
+        publisher: str,
+        language: str,
+        price: int,
+        quantity: int,
+        authors: list[str],
+        genres: list[str]
+    ):
+        if pages <= 0:
+            raise HTTPException(400, "Pages must be > 0")
+        if price < 0:
+            raise HTTPException(400, "Price cannot be negative")
+        if not authors:
+            raise HTTPException(400, "At least one author required")
+        if not genres:
+            raise HTTPException(400, "At least one genre required")
+
         try:
-        
             new_book = Book(
-                title=data.title,
-                year_published=data.year_published,
-                pages=data.pages,
-                publisher=data.publisher,
-                language=data.language,
-                price=getattr(data, "price", 0)
+                title=title,
+                year_published=year_published,
+                pages=pages,
+                publisher=publisher,
+                language=language,
+                price=price
             )
             self.db.add(new_book)
-            
-            self.db.flush() 
-            
+            self.db.flush()
+
+            author_objs = []
+            for name in authors:
+                author = self.db.query(Author).filter_by(name=name).first()
+                if not author:
+                    author = Author(name=name)
+                    self.db.add(author)
+                    self.db.flush()
+                author_objs.append(author)
+
+            new_book.author = author_objs
+
+            genre_objs = []
+            for name in genres:
+                genre = self.db.query(Genre).filter_by(name=name).first()
+                if not genre:
+                    genre = Genre(name=name)
+                    self.db.add(genre)
+                    self.db.flush()
+                genre_objs.append(genre)
+
+            new_book.genre = genre_objs
+
             copy = BookCopy(
                 book_id=new_book.book_id,
-                available=data.quantity,
-                copy_number=data.quantity
+                copy_number=quantity,
+                available=quantity
             )
             self.db.add(copy)
 
             self.db.commit()
             self.db.refresh(new_book)
             return new_book
-            
+
         except IntegrityError:
-            self.db.rollback() 
-            raise HTTPException(status_code=400, detail="This book already exists")
+            self.db.rollback()
+            raise HTTPException(400, "This book already exists")
 
 
-    def create_book(self, title: str, pages: int, publisher: str, language: str, year_published: int , price : int) :
-    
-
+    def create_book(
+        self,
+        title: str,
+        authors: list[str],
+        pages: int,
+        publisher: str,
+        language: str,
+        year_published: int,
+        genres: list[str],
+        price: int
+    ):
         if pages <= 0:
-             raise HTTPException(status_code=400, detail="There must be more than 0 pages")
-        
+            raise HTTPException(status_code=400, detail="There must be more than 0 pages")
+
         if price < 0:
-             raise HTTPException(status_code=400, detail="Price cannot be negative")
-    
-        new_book = Book( 
-            title=title ,  
-            publisher=publisher ,
-            language=language , 
-            year_published=year_published,
-            pages=pages,
-            price = price 
-        )
-    
+            raise HTTPException(status_code=400, detail="Price cannot be negative")
+
         try:
-             self.db.add(new_book)
-             self.db.commit()
-             self.db.refresh(new_book)
-             self.repo.create(new_book)
-             return {"message": "The book has been successfully added"}
+            new_book = Book(
+                title=title,
+                publisher=publisher,
+                language=language,
+                year_published=year_published,
+                pages=pages,
+                price=price
+            )
+            self.db.add(new_book)
+            self.db.flush()
+
+            author_objs = []
+            for name in authors:
+                author = (
+                    self.db.query(Author)
+                    .filter(Author.name == name)
+                    .first()
+                )
+                if not author:
+                    author = Author(name=name)
+                    self.db.add(author)
+                    self.db.flush()
+
+                author_objs.append(author)
+
+            new_book.author = author_objs
+
+            genre_objs = []
+            for name in genres:
+                genre = (
+                    self.db.query(Genre)
+                    .filter(Genre.name == name)
+                    .first()
+                )
+                if not genre:
+                    genre = Genre(name=name)
+                    self.db.add(genre)
+                    self.db.flush()
+
+                genre_objs.append(genre)
+
+            new_book.genre = genre_objs
+
+            self.db.commit()
+            self.db.refresh(new_book)
+            return new_book
+
         except IntegrityError:
-             raise HTTPException(status_code=400, detail="This book already exists")
+            self.db.rollback()
+            raise HTTPException(status_code=400, detail="This book already exists")
