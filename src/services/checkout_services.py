@@ -44,7 +44,8 @@ class CheckoutService:
 
         if not book:
              raise HTTPException(status_code=404, detail="Book not found")
-
+        
+        book_copy.copy_number -= 1
         price = book_copy.book.price
         self.db.delete(checkout)
         self.db.commit()

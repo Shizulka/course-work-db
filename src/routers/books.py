@@ -11,7 +11,7 @@ router = APIRouter(prefix="/books", tags=["Books"])
 
 def get_book_service(db: Session = Depends(get_db)) -> BookService:
     repo = BookRepository(db) 
-    service = BookService(repo) 
+    service = BookService(db, repo)
     return service
 
 @router.post("/batch", response_model=BookResponse)

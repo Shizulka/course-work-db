@@ -62,6 +62,9 @@ class BookService:
         )
     
         try:
+             self.db.add(new_book)
+             self.db.commit()
+             self.db.refresh(new_book)
              self.repo.create(new_book)
              return {"message": "The book has been successfully added"}
         except IntegrityError:

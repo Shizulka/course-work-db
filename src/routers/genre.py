@@ -8,7 +8,7 @@ router = APIRouter(prefix="/genre", tags=["Genre"])
 
 def get_genre_service(db: Session = Depends(get_db)) -> GenreService:
     repo = GenreRepository(db) 
-    service = GenreService(repo) 
+    service = GenreService(db, repo) 
     return service
 
 @router.post("/")
