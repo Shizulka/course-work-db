@@ -186,13 +186,13 @@ class Wishlist(Base):
     wishlist_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     patron_id: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    author: Mapped[str] = mapped_column(String(255), nullable=True) #тут автор пишеться конкретно як стрінга, бо воно буде намагатись шукати з тих авторів шо в нас вже є, а це може бути книжка від автора, якого в нас ще немає
     language: Mapped[str] = mapped_column(String(255), nullable=False)
     publisher: Mapped[str] = mapped_column(String(50), nullable=False, server_default=text("'Невідомо'::character varying"))
     year_published: Mapped[Optional[int]] = mapped_column(Integer)
     added_date: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
     patron: Mapped['Patron'] = relationship('Patron', back_populates='wishlist')
-    author: Mapped[list['Author']] = relationship('Author', secondary='author_book', back_populates='book')
 
 
 class Checkout(Base):
