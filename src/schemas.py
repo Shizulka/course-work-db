@@ -62,3 +62,15 @@ class BookResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class BookInfoSimple(BaseModel):
+    title: str 
+
+class BookCopyResponse(BaseModel):
+    book_copy_id: int
+    copy_number: int
+    available: int
+    
+    book: BookInfoSimple 
+
+    class Config:
+        from_attributes = True

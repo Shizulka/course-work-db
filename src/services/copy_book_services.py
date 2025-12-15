@@ -8,6 +8,9 @@ class BookCopyService:
         self.repo = repo
         self.db = db
 
+    def get_all(self):
+        return self.repo.get_all()
+
     def get_copy_book_list(self):
         copy_book = self.repo.get_all
 
