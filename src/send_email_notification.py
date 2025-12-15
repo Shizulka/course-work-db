@@ -7,7 +7,7 @@ import smtplib
 
 def send_email_notification(to_email: str, subject: str, message: str):
     sender_email = "yrina.lishuk2006@gmail.com" 
-    sender_password = "qgvv qjmd ovqa egre" 
+    sender_password = "" 
     
     msg = MIMEMultipart()
     msg['From'] = sender_email
