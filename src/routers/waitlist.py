@@ -28,7 +28,7 @@ def get_my_position(
 def add_waitlist( book_id: int, patron_id: int,  service: WaitlistService = Depends(get_waitlist_service)):
     return service.create_waitlist(book_id=book_id , patron_id=patron_id) 
 
-@router.post("/issue/{book_id}")
+@router.post("/issue")
 def issue_from_waitlist(
     book_id: int,
     service: WaitlistService = Depends(get_waitlist_service)

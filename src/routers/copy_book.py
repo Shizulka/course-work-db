@@ -5,7 +5,7 @@ from src.repositories.copy_book_repository import BookCopyRepository
 from src.services.copy_book_services import BookCopyService
 from src.schemas import BookCopyResponse
 
-router = APIRouter(prefix="/book copy", tags=["Book Copy"])
+router = APIRouter(prefix="/book-copy", tags=["Book-Copy"])
 
 
 def get_copy_book_service(db: Session = Depends(get_db)) -> BookCopyService:
