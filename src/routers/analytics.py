@@ -11,3 +11,7 @@ def get_analytics_service(db: Session = Depends(get_db)):
 @router.get("/top-patrons")
 def read_top_patrons(service: AnalyticsService = Depends(get_analytics_service)):
     return service.get_top_patrons()
+
+@router.get("/top-genre")
+def get_top_genre (service: AnalyticsService = Depends(get_analytics_service)):
+    return service.get_top_genre()
