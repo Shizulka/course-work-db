@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from src.scheduler import start_scheduler
 from src.routers import books
 from src.routers import patron
 from src.routers import checkout
@@ -37,3 +38,7 @@ app.include_router(notification.router)
 @app.get("/")
 def root():
     return {"message": "Бібліотека працює!"}
+
+@app.on_event("startup")
+def startup_event():
+    start_scheduler()

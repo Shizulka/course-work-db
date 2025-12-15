@@ -212,56 +212,66 @@ class CheckoutService:
         if end_time < datetime.now():
             raise HTTPException(status_code=400, detail="End time cannot be in the past")
 
+        active_checkouts = (
+            self.db.query(Checkout)
+            .filter(Checkout.patron_id == patron_id)
+            .all()
+        )
+
+        for checkout in active_checkouts:
+            self._update_status(checkout)
+            if checkout.status == "Overdue":
+                raise HTTPException(
+                    status_code=403,
+                    detail="You cannot borrow new books until overdue items are returned."
+                )
+
         try:
-            with self.db.begin():
+            inventory_record = (
+                self.db.query(BookCopy)
+                .filter(BookCopy.book_id == book_id)
+                .with_for_update()
+                .one_or_none()
+            )
 
-                inventory_record = (
-                    self.db.query(BookCopy)
-                    .filter(BookCopy.book_id == book_id)
-                    .with_for_update()
-                    .one_or_none()
+            if not inventory_record:
+                raise HTTPException(404, "Inventory record not found")
+
+            if inventory_record.available < 1:
+                raise HTTPException(409, "No books available. Join waitlist.")
+
+            inventory_record.available -= 1
+
+            new_checkout = Checkout(
+                book_copy_id=inventory_record.book_copy_id,
+                patron_id=patron_id,
+                end_time=end_time
+            )
+            self.db.add(new_checkout)
+
+            message_body = NotificationTemplates.BORROW.format(
+                formatted_date=end_time.strftime("%d.%m.%Y")
+            )
+
+            self.db.add(Notification(
+                patron_id=patron_id,
+                contents=message_body
+            ))
+
+            patron = self.db.query(Patron).filter_by(patron_id=patron_id).first()
+            if patron and patron.email:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject="Library: Borrowed book",
+                    message=message_body
                 )
 
-                if not inventory_record:
-                    raise HTTPException(404, "Inventory record not found for this book")
+            self.db.commit()
+            return new_checkout
 
-                if inventory_record.available < 1:
-                    raise HTTPException(409, "No books available. Join waitlist.")
-
-                inventory_record.available -= 1
-
-                new_checkout = Checkout(
-                    book_copy_id=inventory_record.book_copy_id,
-                    patron_id=patron_id,
-                    end_time=end_time
-                )
-                self.db.add(new_checkout)
-
-                formatted_date = end_time.strftime("%d.%m.%Y")
-                message_body = NotificationTemplates.BORROW.format(
-                    formatted_date=formatted_date
-                )
-                notification = Notification(
-                    patron_id=patron_id,
-                    contents=message_body
-                )
-                self.db.add(notification)
-
-                patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
-            
-                book_title = inventory_record.book.title if inventory_record.book else "Library Book"
-
-                if patron and patron.email:
-                    send_email_notification(
-                        to_email=patron.email,
-                        subject=f"Library: Borrowed '{book_title}'",
-                        message=message_body
-                    )
-
-                return new_checkout
-
-        except IntegrityError:
-            raise HTTPException(400, "Checkout failed due to data integrity error")
+        except Exception:
+            self.db.rollback()
+            raise
 
     def get_checkout_list(self, patron_id: int, book_id: int | None = None):
         query = (
@@ -280,47 +290,56 @@ class CheckoutService:
         self.db.commit()
         return checkouts
 
-    def _update_status(self, checkout: Checkout):
+    def _update_status(self, checkout: Checkout) -> bool:
 
         if not checkout.end_time:
             return
 
         now = datetime.now()
-        old_status = checkout.status  
-        new_status = old_status       
+        old_status = checkout.status       
 
         if now > checkout.end_time:
-            checkout.status = "Overdue"
-        elif checkout.end_time - now < timedelta(days=3):
-            checkout.status = "Soon"
+            new_status = "Overdue"
+            template = NotificationTemplates.OVERDUE
+            subject = "Library: Overdue book"
+        elif checkout.end_time - now <= timedelta(days=3):
+            new_status = "Soon"
+            template = NotificationTemplates.SOON
+            subject = "Library: Return reminder"
         else:
-            checkout.status = "OK"
-
-        if old_status != new_status:
-            checkout.status = new_status
-        
+            new_status = "OK"
             template = None
-            if new_status == "Soon":
-                template = NotificationTemplates.SOON
-            elif new_status == "Overdue":
-                template = NotificationTemplates.OVERDUE
-            
-            if template:
-                notification = Notification(
-                    patron_id=checkout.patron_id,
-                    contents=template
+
+        if new_status == old_status:
+            return False
+
+        checkout.status = new_status
+        
+        if template:
+            notification = Notification(
+                patron_id=checkout.patron_id,
+                contents=template
+            )
+            self.db.add(notification)
+
+            patron = checkout.patron
+            if patron and patron.email:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject=subject,
+                    message=template
                 )
-                self.db.add(notification)
 
-                patron = checkout.patron 
-                
-                book_title = "Library Book"
-                if checkout.book_copy and checkout.book_copy.book:
-                    book_title = checkout.book_copy.book.title
+        return True
 
-                if patron and patron.email:
-                    send_email_notification(
-                        to_email=patron.email,
-                        subject=f"Library Notification: Status {new_status}",
-                        message=template
-                    )
+    def update_all_checkout_statuses(self):
+        checkouts = self.db.query(Checkout).all()
+
+        changed = False
+        for checkout in checkouts:
+            updated = self._update_status(checkout)
+            if updated:
+                changed = True
+
+        if changed:
+            self.db.commit()
