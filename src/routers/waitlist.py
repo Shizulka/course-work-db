@@ -13,17 +13,6 @@ def get_waitlist_service(db: Session = Depends(get_db)) -> WaitlistService:
     service = WaitlistService(repo, book_copy_repo)
     return service
 
-@router.get("/position")
-def get_my_position(
-    book_id: int, 
-    patron_id: int, 
-    service: WaitlistService = Depends(get_waitlist_service)
-):
-    pos = service.get_patron_position(book_id, patron_id)
-    if pos == 0:
-        return {"message": "Ви не у черзі"}
-    return {"message": f"Ваша позиція: {pos}"}
-
 @router.post("/")
 def add_waitlist( book_id: int, patron_id: int,  service: WaitlistService = Depends(get_waitlist_service)):
     return service.create_waitlist(book_id=book_id , patron_id=patron_id) 
@@ -34,3 +23,14 @@ def issue_from_waitlist(
     service: WaitlistService = Depends(get_waitlist_service)
 ):
     return service.issue_book_from_waitlist(book_id)
+
+@router.get("/position")
+def get_my_position(
+    book_id: int, 
+    patron_id: int, 
+    service: WaitlistService = Depends(get_waitlist_service)
+):
+    pos = service.get_patron_position(book_id, patron_id)
+    if pos == 0:
+        return {"message": "Ви не у черзі"}
+    return {"message": f"Ваша позиція: {pos}"}

@@ -13,10 +13,6 @@ def get_copy_book_service(db: Session = Depends(get_db)) -> BookCopyService:
     service = BookCopyService(db, repo) 
     return service
 
-@router.get("/", response_model=list[BookCopyResponse]) 
-def get_all_copies(service: BookCopyService = Depends(get_copy_book_service)):
-    return service.get_all()
-
 @router.post("/update")
 def add_copy_book( book_id: int , copy_number: int , service: BookCopyService = Depends(get_copy_book_service)):
     return service.update_available( book_id=book_id, copy_number= copy_number ) 
@@ -25,3 +21,6 @@ def add_copy_book( book_id: int , copy_number: int , service: BookCopyService = 
 def add_copy_book( book_id: int , copy_number: int , available :int  , service: BookCopyService = Depends(get_copy_book_service)):
     return service.create_copy_book( book_id=book_id, copy_number= copy_number , available =available  ) 
 
+@router.get("/", response_model=list[BookCopyResponse]) 
+def get_all_copies(service: BookCopyService = Depends(get_copy_book_service)):
+    return service.get_all()

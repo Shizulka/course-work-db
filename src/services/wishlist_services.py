@@ -12,6 +12,15 @@ class WishlistService:
     def get_wishlist_list(self):
         wishlist = self.repo.get_all()
         return wishlist or []
+
+    def get_wishlist_by_patron(self, patron_id: int):
+        wishlist = (
+            self.repo.db
+            .query(self.repo.model)
+            .filter(self.repo.model.patron_id == patron_id)
+            .all()
+        )
+        return wishlist or []
     
     def create_wishlist(self, patron_id: int, title: str, author: str, publisher: str, language: str, year_published: int) :
     
