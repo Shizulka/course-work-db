@@ -11,7 +11,7 @@ class PatronService:
 
     def get_patron_list(self):
         patron = self.repo.get_all()
-        return patrons or []
+        return patron or []
     
     def create_patron(self, first_name: str, last_name: str, email: str, phone_number: str ) :
         email_pattern = "^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$"
