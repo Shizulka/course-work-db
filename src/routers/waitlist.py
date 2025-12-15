@@ -24,7 +24,13 @@ def get_my_position(
         return {"message": "Ви не у черзі"}
     return {"message": f"Ваша позиція: {pos}"}
 
-
 @router.post("/")
 def add_waitlist( book_id: int, patron_id: int,  service: WaitlistService = Depends(get_waitlist_service)):
     return service.create_waitlist(book_id=book_id , patron_id=patron_id) 
+
+@router.post("/issue/{book_id}")
+def issue_from_waitlist(
+    book_id: int,
+    service: WaitlistService = Depends(get_waitlist_service)
+):
+    return service.issue_book_from_waitlist(book_id)

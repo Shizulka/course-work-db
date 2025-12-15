@@ -1,9 +1,9 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.repositories.copy_book_repository import BookCopyRepository
-from src.models import Waitlist
-from src.models import Notification
+from src.models import Waitlist, Notification, Checkout, BookCopy 
 
 class WaitlistService:
     def __init__(self , repo : WaitlistRepository , book_copy_repo: BookCopyRepository):
@@ -32,6 +32,12 @@ class WaitlistService:
 
         inventory = self.book_copy_repo.get_by_book_id(book_id)
 
+        if not inventory:
+            raise HTTPException(
+                status_code=404,
+                detail="No inventory record for this book"
+            )
+
         if inventory.available > 0:
             raise HTTPException(
                 status_code=400,
@@ -54,6 +60,63 @@ class WaitlistService:
             self.db.commit()
             self.db.refresh(new_waitlist)
             return new_waitlist
+
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def issue_book_from_waitlist(self, book_id: int):
+        try:
+            with self.db.begin():
+
+                inventory = (
+                    self.db.query(BookCopy)
+                    .filter(BookCopy.book_id == book_id)
+                    .with_for_update()
+                    .one_or_none()
+                )
+
+                if not inventory or inventory.available < 1:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="No available copies of this book"
+                    )
+
+                first_waiter = (
+                    self.db.query(Waitlist)
+                    .filter(Waitlist.book_id == book_id)
+                    .order_by(Waitlist.created_at)
+                    .with_for_update()
+                    .first()
+                )
+
+                if not first_waiter:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Waitlist is empty"
+                    )
+
+                checkout = Checkout(
+                    patron_id=first_waiter.patron_id,
+                    book_copy_id=inventory.book_copy_id,
+                    end_time=datetime.now()
+                )
+                self.db.add(checkout)
+
+                inventory.available -= 1
+
+                self.db.delete(first_waiter)
+
+                notification = Notification(
+                    patron_id=first_waiter.patron_id,
+                    contents=(
+                        "The book you were waiting for is now available. "
+                        "Please visit the library to collect it."
+                    )
+                )
+                self.db.add(notification)
+
+                return checkout
 
         except Exception:
             self.db.rollback()
