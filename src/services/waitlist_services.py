@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.repositories.copy_book_repository import BookCopyRepository
-from src.models import Waitlist, Notification, Checkout, BookCopy 
+from src.models import Book, Patron, Waitlist, Notification, Checkout, BookCopy 
+from src.templates import NotificationTemplates
+from src.send_email_notification import send_email_notification
 
 class WaitlistService:
     def __init__(self , repo : WaitlistRepository , book_copy_repo: BookCopyRepository):
@@ -51,16 +53,31 @@ class WaitlistService:
             )
             self.db.add(new_waitlist)
 
-            notification = Notification(
-                patron_id=patron_id,
-                contents="You have been added to the waitlist for this book."
-            )
-            self.db.add(notification)
+            patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+            book = self.db.query(Book).filter(Book.book_id == book_id).first()
 
-            self.db.commit()
-            self.db.refresh(new_waitlist)
-            return new_waitlist
+            if patron and book:
+                message_body = NotificationTemplates.WAITLIST_ADDED.format(
+                    title=book.title
+                )
 
+                notification = Notification(
+                    patron_id=patron_id,
+                    contents=message_body
+                )
+                self.db.add(notification)
+
+                if patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject="Library: Added to Waitlist",
+                        message=message_body
+                    )
+
+                    self.db.commit()
+                    self.db.refresh(new_waitlist)
+                    return new_waitlist
+                
         except Exception:
             self.db.rollback()
             raise
@@ -107,16 +124,34 @@ class WaitlistService:
 
                 self.db.delete(first_waiter)
 
-                notification = Notification(
-                    patron_id=first_waiter.patron_id,
-                    contents=(
-                        "The book you were waiting for is now available. "
-                        "Please visit the library to collect it."
+                patron = self.db.query(Patron).filter(Patron.patron_id == first_waiter.patron_id).first()
+                book_title = inventory.book.title if inventory.book else "Unknown Book"
+                if patron:
+    
+                    message_body = NotificationTemplates.BOOK_AVAILABLE.format(
+                        title=book_title
+                        )
+
+               
+                    notification = Notification(
+                        patron_id=first_waiter.patron_id,
+                        contents=message_body
                     )
-                )
+
+                    self.db.add(notification)
+
+                
+                if patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject="Library: Your book is ready!",
+                        message=message_body
+                    )
+
                 self.db.add(notification)
 
-                return checkout
+            self.db.commit()
+            return checkout
 
         except Exception:
             self.db.rollback()

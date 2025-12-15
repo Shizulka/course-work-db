@@ -4,12 +4,15 @@ from datetime import datetime , timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from src.models import Checkout
+from src.models import Checkout, Patron
 from src.models import Book
 from src.models import BookCopy
 from src.models import Notification
 from src.repositories.checkout_repository import CheckoutRepository
 from src.repositories.copy_book_repository import BookCopyRepository
+from src.templates import NotificationTemplates
+from src.send_email_notification import send_email_notification
+
 
 
 class CheckoutService:
@@ -60,13 +63,24 @@ class CheckoutService:
                 price = book.price
                 self.db.delete(checkout)
 
+                message_body = NotificationTemplates.FINE.format(price=price)
+                
                 notification = Notification(
                     patron_id=patron_id,
-                    contents=f"The book was marked as lost. Fine: {price:.2f} UAH."
+                    contents=message_body
                 )
                 self.db.add(notification)
 
-                return {"message": f"The book was marked as lost. Fine: {price:.2f} UAH."}
+                patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+                
+                if patron and patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject=f"Library: Fine for lost book '{book.title}'",
+                        message=message_body
+                    )
+
+                return {"message": message_body}
 
         except Exception:
             self.db.rollback()
@@ -109,14 +123,21 @@ class CheckoutService:
 
                 self.db.delete(checkout)
 
-                notification = Notification(
-                    patron_id=patron_id,
-                    contents="The book has been successfully returned."
-                )
-                self.db.add(notification)
+                message_body = NotificationTemplates.RETUTN
+
+                patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+                
+                book_title = book_copy.book.title if book_copy.book else "Book"
+
+                if patron and patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject=f"Library: Return Successful - {book_title}",
+                        message=message_body
+                    )
 
                 return {
-                    "message": "The book has been successfully returned.",
+                    "message": message_body,
                     "new_availability": book_copy.available
                 }
 
@@ -159,11 +180,26 @@ class CheckoutService:
                 self.db.add(new_checkout)
 
                 formatted_date = end_time.strftime("%d.%m.%Y")
+                message_body = NotificationTemplates.BORROW.format(
+                    formatted_date=formatted_date
+                )
                 notification = Notification(
                     patron_id=patron_id,
-                    contents=f"You have successfully borrowed the book. Please return it by {formatted_date}."
+                    contents=message_body
                 )
                 self.db.add(notification)
+
+                patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+            
+                book_title = inventory_record.book.title if inventory_record.book else "Library Book"
+
+                if patron and patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject=f"Library: Borrowed '{book_title}'",
+                        message=message_body
+                    )
+
                 return new_checkout
 
         except IntegrityError:
@@ -192,7 +228,8 @@ class CheckoutService:
             return
 
         now = datetime.now()
-        old_status = checkout.status
+        old_status = checkout.status  
+        new_status = old_status       
 
         if now > checkout.end_time:
             checkout.status = "Overdue"
@@ -200,3 +237,32 @@ class CheckoutService:
             checkout.status = "Soon"
         else:
             checkout.status = "OK"
+
+        if old_status != new_status:
+            checkout.status = new_status
+        
+            template = None
+            if new_status == "Soon":
+                template = NotificationTemplates.SOON
+            elif new_status == "Overdue":
+                template = NotificationTemplates.OVERDUE
+            
+            if template:
+                notification = Notification(
+                    patron_id=checkout.patron_id,
+                    contents=template
+                )
+                self.db.add(notification)
+
+                patron = checkout.patron 
+                
+                book_title = "Library Book"
+                if checkout.book_copy and checkout.book_copy.book:
+                    book_title = checkout.book_copy.book.title
+
+                if patron and patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject=f"Library Notification: Status {new_status}",
+                        message=template
+                    )
