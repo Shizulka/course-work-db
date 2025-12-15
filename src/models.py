@@ -23,10 +23,9 @@ class Author(Base):
 
     book: Mapped[list['Book']] = relationship('Book', secondary='author_book', back_populates='author')
 
-
 class Book(Base):
-    __tablename__ = 'book'
-    __table_args__ = (
+    tablename = 'book'
+    table_args = (
         CheckConstraint('pages > 0', name='book_pages_check'),
         PrimaryKeyConstraint('book_id', name='book_pkey'),
         UniqueConstraint('title', 'language', 'publisher', 'year_published', name='uq_book_identity')
@@ -38,7 +37,8 @@ class Book(Base):
     publisher: Mapped[str] = mapped_column(String(50), nullable=False, server_default=text("'Невідомо'::character varying"))
     year_published: Mapped[Optional[int]] = mapped_column(Integer)
     pages: Mapped[Optional[int]] = mapped_column(Integer)
-
+    price: Mapped[int] = mapped_column(Integer)
+    
     author: Mapped[list['Author']] = relationship('Author', secondary='author_book', back_populates='book')
     genre: Mapped[list['Genre']] = relationship('Genre', secondary='book_genres', back_populates='book')
     book_copy: Mapped[list['BookCopy']] = relationship('BookCopy', back_populates='book')
