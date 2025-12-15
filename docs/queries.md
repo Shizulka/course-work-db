@@ -1,23 +1,19 @@
-BEGIN; 
-
-WITH closed_loan AS (
-
-    UPDATE checkout
-    SET 
-        end_time = NOW(),     
-        status = 'Overdue'::status_type 
-    WHERE 
-        book_copy_id = 2           
-        AND end_time IS NULL        
-    RETURNING patron_id, book_copy_id  
+WITH patron_activity AS (
+    SELECT
+        p.patron_id,
+        p.first_name,
+        p.last_name,
+        p.email,
+        COUNT(c.checkout_id) AS checkout_count
+    FROM checkout c
+    JOIN patron p ON c.patron_id = p.patron_id
+    JOIN book_copy bc ON c.book_copy_id = bc.book_copy_id
+    GROUP BY p.patron_id, p.first_name, p.last_name, p.email
+    HAVING COUNT(c.checkout_id) >= 2
 )
-
-
-INSERT INTO notification (patron_id, contents)
-SELECT 
-    patron_id, 
-    'Шановний читач! Ви повідомили про втрату книги (Копія #' || book_copy_id || '). Вам нараховано штраф 200 грн'
-
-COMMIT;
-
-шираф книги
+SELECT
+    *,
+    RANK() OVER (ORDER BY checkout_count DESC) AS activity_rank
+FROM patron_activity
+ORDER BY checkout_count DESC
+LIMIT 5;
