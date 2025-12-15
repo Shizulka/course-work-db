@@ -20,62 +20,110 @@ class CheckoutService:
 
 
     def lost_book(self, patron_id: int, book_copy_id: int):
-        checkout = self.db.query(Checkout).filter(
-          Checkout.patron_id == patron_id,
-          Checkout.book_copy_id == book_copy_id
-        ).first()
+        try:
+            with self.db.begin():
 
-        if not checkout:
-            raise HTTPException(status_code=404, detail="No record of issuance found")
+                checkout = (
+                    self.db.query(Checkout)
+                    .filter(
+                        Checkout.patron_id == patron_id,
+                        Checkout.book_copy_id == book_copy_id
+                    )
+                    .with_for_update()
+                    .first()
+                )
 
-        book_copy = (
-            self.db.query(BookCopy)
-            .filter(BookCopy.book_copy_id == checkout.book_copy_id)
-            .with_for_update()
-            .first()
-        )
+                if not checkout:
+                    raise HTTPException(404, "No record of issuance found")
 
-        if not book_copy:
-             raise HTTPException(status_code=404, detail="No copy of the book found in the database")
+                book_copy = (
+                    self.db.query(BookCopy)
+                    .filter(BookCopy.book_copy_id == checkout.book_copy_id)
+                    .with_for_update()
+                    .first()
+                )
 
-        book = self.db.query(Book).filter(
-             Book.book_id == book_copy.book_id
-        ).first()
+                if not book_copy:
+                    raise HTTPException(404, "No copy of the book found")
 
-        if not book:
-             raise HTTPException(status_code=404, detail="Book not found")
-        
-        book_copy.copy_number -= 1
-        price = book_copy.book.price
-        self.db.delete(checkout)
-        self.db.commit()
+                book = (
+                    self.db.query(Book)
+                    .filter(Book.book_id == book_copy.book_id)
+                    .first()
+                )
 
-        return {
-             "message": f"Сума штрафу: {price:.2f} грн"
-        }
+                if not book:
+                    raise HTTPException(404, "Book not found")
 
-    def return_book (self ,  patron_id :int , book_copy_id :int):
-            checkout = self.db.query(Checkout).filter(
-                 Checkout.patron_id == patron_id,
-                 Checkout.book_copy_id == book_copy_id, 
-                 ).first()
+                book_copy.copy_number -= 1
 
-            if not checkout:
-                raise HTTPException(status_code=404, detail="No record of issuance found")
+                price = book.price
+                self.db.delete(checkout)
 
-            book_copy = self.db.query(BookCopy)\
-                .filter(BookCopy.book_copy_id == checkout.book_copy_id)\
-                .with_for_update()\
-                .first()
+                notification = Notification(
+                    patron_id=patron_id,
+                    contents=f"The book was marked as lost. Fine: {price:.2f} UAH."
+                )
+                self.db.add(notification)
 
-            if not book_copy:
-                raise HTTPException(status_code=404, detail="No copy of the book found in the database")
+                return {"message": f"The book was marked as lost. Fine: {price:.2f} UAH."}
 
-            book_copy.available += 1
-            self.db.delete(checkout)
-            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
 
-            return {"message": "The book has been successfully returned.", "new_availability": book_copy.available}
+    def return_book(self, patron_id: int, book_copy_id: int):
+        try:
+            with self.db.begin():
+
+                checkout = (
+                    self.db.query(Checkout)
+                    .filter(
+                        Checkout.patron_id == patron_id,
+                        Checkout.book_copy_id == book_copy_id
+                    )
+                    .with_for_update()
+                    .first()
+                )
+
+                if not checkout:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="No record of issuance found"
+                    )
+
+                book_copy = (
+                    self.db.query(BookCopy)
+                    .filter(BookCopy.book_copy_id == checkout.book_copy_id)
+                    .with_for_update()
+                    .first()
+                )
+
+                if not book_copy:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="No copy of the book found in the database"
+                    )
+
+                book_copy.available += 1
+
+                self.db.delete(checkout)
+
+                notification = Notification(
+                    patron_id=patron_id,
+                    contents="The book has been successfully returned."
+                )
+                self.db.add(notification)
+
+                return {
+                    "message": "The book has been successfully returned.",
+                    "new_availability": book_copy.available
+                }
+
+        except Exception:
+            self.db.rollback()
+            raise
+
 
     def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):
 
