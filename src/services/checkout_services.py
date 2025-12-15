@@ -4,7 +4,7 @@ from datetime import datetime , timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from src.models import Checkout, Patron
+from src.models import Checkout, Patron, Waitlist
 from src.models import Book
 from src.models import BookCopy
 from src.models import Notification
@@ -13,13 +13,71 @@ from src.repositories.copy_book_repository import BookCopyRepository
 from src.templates import NotificationTemplates
 from src.send_email_notification import send_email_notification
 
-
-
 class CheckoutService:
     def __init__(self, repo: CheckoutRepository, book_copy_repo: BookCopyRepository):
         self.repo = repo
         self.book_copy_repo = book_copy_repo
         self.db: Session = repo.db
+
+    def renew_book(self, checkout_id : int):
+        try:
+            with self.db.begin():
+                checkout = (
+                    self.db.query(Checkout)
+                    .filter(Checkout.checkout_id == checkout_id)
+                    .with_for_update()
+                    .first()
+                )
+
+                if not checkout:
+                    raise HTTPException(status_code=404, detail="Checkout record not found")
+                
+                book_id = checkout.book_copy.book_id
+                waitlist_count = (
+                    self.db.query(Waitlist)
+                    .filter(Waitlist.book_id == book_id)
+                    .count()
+                )
+
+                if waitlist_count > 0:
+                    raise HTTPException(
+                        status_code=409, 
+                        detail="Cannot renew: Other patrons are waiting for this book."
+                    )
+                
+                if checkout.end_time < datetime.now():
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Cannot renew: The book is overdue. Please return it and pay the fine."
+                    )
+                
+                new_end_time = checkout.end_time + timedelta(days=7)
+
+                checkout.end_time = new_end_time
+                checkout.status = "OK"
+            
+                formatted_date = new_end_time.strftime("%d.%m.%Y")
+                message_body = NotificationTemplates.RENEWED.format(date=formatted_date)
+
+                notification = Notification(
+                    patron_id=checkout.patron_id,
+                    contents=message_body
+                )
+                self.db.add(notification)
+
+                patron = checkout.patron 
+                if patron and patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject="Library: Book Renewed",
+                        message=message_body
+                    )
+
+                return {"message": message_body, "new_due_date": formatted_date}
+
+        except Exception as e:
+            self.db.rollback()
+            raise e
 
 
     def lost_book(self, patron_id: int, book_copy_id: int):

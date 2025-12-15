@@ -15,6 +15,12 @@ def get_checkout_service(db: Session = Depends(get_db)) -> CheckoutService:
     book_copy_repo = BookCopyRepository(db) 
     return CheckoutService(repo=repo, book_copy_repo=book_copy_repo)
 
+@router.put("/renew")
+def renew_book_loan(
+    checkout_id: int, 
+    service: CheckoutService = Depends(get_checkout_service)):
+    return service.renew_book(checkout_id=checkout_id)
+
 @router.post("/borrow", response_model=CheckoutResponse)
 def borrow_book(book_id: int,  patron_id: int,   end_time: datetime,  service: CheckoutService = Depends(get_checkout_service)):
   return service.create_checkout( book_id=book_id, patron_id=patron_id, end_time=end_time)
@@ -30,3 +36,4 @@ def lost_book( patron_id :int , book_copy_id :int , service: CheckoutService = D
 @router.get("/", response_model=list[CheckoutResponse])
 def get_checkouts( patron_id: int,  book_id: int | None = None, service: CheckoutService = Depends(get_checkout_service),):
     return service.get_checkout_list(  patron_id=patron_id,  book_id=book_id)
+

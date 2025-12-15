@@ -1,4 +1,5 @@
 class NotificationTemplates:
+    
     WAITLIST_ADDED = "You have been added to the waitlist for book: '{title}'."
     
     BOOK_AVAILABLE = "Good news! The book '{title}' is now available for pickup."
@@ -14,3 +15,5 @@ class NotificationTemplates:
     SOON = "The loan period for this book ends in 3 days. Please return the book."
 
     OVERDUE ="You missed the deadline for returning the book. Please return the book and pay the fine."
+
+    RENEWED = "Success! The loan period has been extended. New due date: {date}."
