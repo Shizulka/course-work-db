@@ -1,8 +1,9 @@
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from src.repositories.wishlist_repository import WishlistRepository
-from src.models import Wishlist
-from src.models import Notification
+from src.models import Wishlist, Notification, Patron
+from src.templates import NotificationTemplates
+from src.send_email_notification import send_email_notification
 
 class WishlistService:
     def __init__(self , repo : WishlistRepository):
@@ -37,14 +38,28 @@ class WishlistService:
                 )
                 self.db.add(new_wishlist)
 
+                message_body = NotificationTemplates.WISHLIST_CREATED.format(
+                    title=title
+                )
+
                 notification = Notification(
                     patron_id=patron_id,
-                    contents=(
-                        f"Your request to add the book '{title}' "
-                        f"has been successfully submitted."
-                    )
+                    contents=message_body
                 )
                 self.db.add(notification)
+
+                patron = (
+                    self.db.query(Patron)
+                    .filter(Patron.patron_id == patron_id)
+                    .first()
+                )
+
+                if patron and patron.email:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject="Library: Wishlist request created",
+                        message=message_body
+                    )
 
                 return {
                     "message": "Wishlist request created successfully",

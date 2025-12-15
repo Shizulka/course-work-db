@@ -10,10 +10,14 @@ class NotificationTemplates:
 
     BORROW = "You have successfully borrowed the book. Please return it by {formatted_date}."
 
-    WAITLIST_END = "The book you were waiting for is now available.Please visit the library to collect it."
+    WAITLIST_END = "The book '{title}' you were waiting for is now available. Please visit the library to borrow it."
 
-    SOON = "The loan period for this book ends in 3 days. Please return the book."
+    SOON = "The loan period for '{title}' ends in 3 days. Please return the book."
 
-    OVERDUE ="You missed the deadline for returning the book. Please return the book and pay the fine."
+    OVERDUE ="You missed the deadline for returning '{title}'. Please return the book and pay the fine."
 
-    RENEWED = "Success! The loan period has been extended. New due date: {date}."
+    RENEWED = "Success! The loan period for '{title}' has been extended. New due date: {date}."
+
+    WISHLIST_CREATED = "Your request to add the book '{title}' has been successfully submitted."
+
+    WISHLIST_FULFILLED = "Good news! The book '{title}' is now available in the library. You can come and borrow it."

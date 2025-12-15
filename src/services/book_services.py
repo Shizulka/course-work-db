@@ -3,7 +3,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from src.schemas import BookCreateWithCopies
 from src.repositories.book_repository import BookRepository
-from src.models import Book, BookCopy, Author, Genre
+from src.models import Book, BookCopy, Author, Genre, Wishlist, Notification, Patron
+from src.templates import NotificationTemplates
+from src.send_email_notification import send_email_notification
 
 class BookService:
     def __init__(self, db: Session, repo: BookRepository):
@@ -16,6 +18,54 @@ class BookService:
         if not book:
             return []
         return book
+
+    
+    def fulfill_wishlist_for_book(self, book: Book):
+        book_author_names = {a.name.lower() for a in book.author}
+
+        wishlists = (
+            self.db.query(Wishlist)
+            .filter(
+                Wishlist.title == book.title,
+                Wishlist.language == book.language,
+                Wishlist.publisher == book.publisher,
+                Wishlist.year_published == book.year_published,
+            )
+            .all()
+        )
+
+        for w in wishlists:
+            if w.author:
+                wishlist_authors = {
+                    a.strip().lower()
+                    for a in w.author.split(",")
+                    if a.strip()
+                }
+
+                if wishlist_authors.isdisjoint(book_author_names):
+                    continue
+
+
+            message = NotificationTemplates.WISHLIST_FULFILLED.format(
+                title=book.title
+            )
+
+            self.db.add(Notification(
+                patron_id=w.patron_id,
+                contents=message
+            ))
+
+            patron = self.db.query(Patron).get(w.patron_id)
+            if patron and patron.email:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject=f"Library: '{book.title}' is now available",
+                    message=message
+                )
+
+            # заявка виконана
+            self.db.delete(w)
+
     
     def create_book_with_copies(
         self,
@@ -78,6 +128,8 @@ class BookService:
                 available=quantity
             )
             self.db.add(copy)
+
+            self.fulfill_wishlist_for_book(new_book)
 
             self.db.commit()
             self.db.refresh(new_book)
