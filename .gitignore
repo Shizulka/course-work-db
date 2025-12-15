@@ -7,6 +7,6 @@ venv/
 env/
 
 .env
-
+src/send_email_notification.py
 .vscode/
 .idea/
