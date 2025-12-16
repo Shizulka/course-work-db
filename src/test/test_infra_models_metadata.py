@@ -4,7 +4,6 @@ from src.models import Base
 def test_models_metadata_has_expected_tables():
     tables = set(Base.metadata.tables.keys())
 
-    # Base.metadata.tables включає і таблиці звʼязків (author_book, book_genres)
     expected = {
         "author",
         "book",

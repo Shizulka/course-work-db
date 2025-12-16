@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from datetime import datetime , timedelta
+from datetime import datetime, timedelta, UTC
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -45,7 +45,7 @@ class CheckoutService:
                         detail="Cannot renew: Other patrons are waiting for this book."
                     )
                 
-                if checkout.end_time < datetime.now():
+                if checkout.end_time < datetime.now(UTC):
                     raise HTTPException(
                         status_code=400,
                         detail="Cannot renew: The book is overdue. Please return it and pay the fine."
@@ -223,7 +223,7 @@ class CheckoutService:
         if not end_time:
             raise HTTPException(status_code=400, detail="End time is required")
 
-        if end_time < datetime.now():
+        if end_time < datetime.now(UTC):
             raise HTTPException(status_code=400, detail="End time cannot be in the past")
 
         active_checkouts = (
@@ -316,7 +316,7 @@ class CheckoutService:
         if not checkout.end_time:
             return
 
-        now = datetime.now()
+        now = datetime.now(UTC)
         old_status = checkout.status       
 
         if now > checkout.end_time:

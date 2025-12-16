@@ -1,29 +1,25 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from contextlib import asynccontextmanager
 from src.scheduler import start_scheduler
-from src.routers import books
-from src.routers import patron
-from src.routers import checkout
-from src.routers import waitlist
-from src.routers import copy_book
-from src.routers import author
-from src.routers import genre
-from src.routers import wishlist
-from src.routers import relations
-from src.routers import notification
-from src.routers import analytics
-from src.database import get_db
+from src.routers import books, patron, checkout, waitlist, copy_book, author, genre, wishlist, relations, notification, analytics
+from src.database import get_db, db_ping
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     try:
-        db.execute(text("SELECT 1"))
+        db_ping(db)
         return {"status": "ok", "message": "Підключення до Railway успішне!"}
     except Exception as e:
-        return {"status": "error", "details": str(e)}
+        raise HTTPException(status_code=503, detail=str(e))
     
 app.include_router(books.router)
 app.include_router(patron.router)
@@ -40,7 +36,3 @@ app.include_router(analytics.router)
 @app.get("/")
 def root():
     return {"message": "Бібліотека працює!"}
-
-@app.on_event("startup")
-def startup_event():
-    start_scheduler()

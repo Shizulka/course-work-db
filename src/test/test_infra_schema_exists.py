@@ -1,6 +1,5 @@
 from sqlalchemy import inspect
 
-# Таблиці, які точно мають бути у вашій схемі (з models.py)
 EXPECTED_TABLES = {
     "author",
     "book",

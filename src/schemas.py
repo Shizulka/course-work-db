@@ -1,30 +1,23 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional
-
-from pydantic import BaseModel
-from datetime import datetime
-from typing import List, Optional
-
+from typing import Optional, List
 
 class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     notification_id: int
     patron_id: int
     contents: str
 
-    class Config:
-        from_attributes = True 
-
 class CheckoutResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     checkout_id: int  
     book_copy_id: int
     patron_id: int
     start_time: datetime
     end_time: datetime
     status: str
-
-    class Config:
-        from_attributes = True
 
 class BookCreate(BaseModel):
     title: str
@@ -48,26 +41,26 @@ class BookCreateWithCopies(BaseModel):
     quantity: int = 1
 
 class BookCopyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     book_copy_id: int
     copy_number: int
-    class Config:
-        from_attributes = True
 
 class AuthorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     author_id: int
     name: str
 
-    class Config:
-        from_attributes = True
-
 class GenreResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     genre_id: int
     name: str
 
-    class Config:
-        from_attributes = True
-
 class BookResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     book_id: int
     title: str
     author: List[AuthorResponse]
@@ -79,18 +72,15 @@ class BookResponse(BaseModel):
     price: int
     copy_number: List[BookCopyResponse] = [] 
     
-    class Config:
-        from_attributes = True
 
 class BookInfoSimple(BaseModel):
     title: str 
 
 class BookCopyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     book_copy_id: int
     copy_number: int
     available: int
     
     book: BookInfoSimple 
-
-    class Config:
-        from_attributes = True

@@ -18,7 +18,6 @@ def test_db_url() -> str:
 @pytest.fixture(scope="session")
 def engine(test_db_url):
     eng = create_engine(test_db_url, pool_pre_ping=True)
-    # швидка перевірка, що зʼєднання реально є
     with eng.connect() as conn:
         conn.execute(text("SELECT 1"))
     return eng
@@ -26,10 +25,6 @@ def engine(test_db_url):
 
 @pytest.fixture()
 def db_session(engine):
-    """
-    Один тест = одна транзакція, в кінці rollback.
-    Це дозволяє 'очищати БД' між тестами без TRUNCATE.
-    """
     connection = engine.connect()
     transaction = connection.begin()
 
@@ -40,5 +35,7 @@ def db_session(engine):
         yield session
     finally:
         session.close()
-        transaction.rollback()
+        if transaction.is_active:
+            transaction.rollback()
         connection.close()
+

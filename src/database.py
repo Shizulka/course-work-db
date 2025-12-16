@@ -1,5 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 
@@ -16,3 +18,6 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def db_ping(db: Session) -> None:
+    db.execute(text("SELECT 1"))
