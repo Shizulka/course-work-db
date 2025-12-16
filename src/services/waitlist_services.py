@@ -1,83 +1,106 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime, UTC
+
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.repositories.copy_book_repository import BookCopyRepository
 from src.models import Book, Patron, Waitlist, Notification, Checkout, BookCopy 
 from src.templates import NotificationTemplates
 from src.send_email_notification import send_email_notification
+import os
 
 class WaitlistService:
-    def __init__(self , repo : WaitlistRepository , book_copy_repo: BookCopyRepository):
+    def __init__(self, repo: WaitlistRepository, book_copy_repo: BookCopyRepository):
         self.repo = repo
         self.book_copy_repo = book_copy_repo
         self.db: Session = repo.db
 
     def get_waitlist_list(self):
         waitlist = self.repo.get_all()
-        
-        if not waitlist:
-            return []
-        return waitlist
-    
-    def get_patron_position(self , book_id : int , patron_id : int )-> int:
+        return waitlist or []
+
+    def get_patron_position(self, book_id: int, patron_id: int) -> int:
         item = self.repo.get_by_patron_and_book(patron_id, book_id)
 
         if not item:
             return 0
-        
+
         my_time = item.created_at
         count = self.repo.count_ahead(book_id, my_time)
         return count + 1
 
     def create_waitlist(self, book_id: int, patron_id: int):
-
         inventory = self.book_copy_repo.get_by_book_id(book_id)
 
         if not inventory:
             raise HTTPException(
                 status_code=404,
-                detail="No inventory record for this book"
+                detail="No inventory record for this book",
             )
 
         if inventory.available > 0:
             raise HTTPException(
                 status_code=400,
-                detail="Book is available! You can checkout directly instead of joining waitlist."
+                detail="Book is available! You can checkout directly instead of joining waitlist.",
             )
 
         try:
             new_waitlist = Waitlist(
                 book_id=book_id,
-                patron_id=patron_id
+                patron_id=patron_id,
             )
             self.db.add(new_waitlist)
 
-            patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
-            book = self.db.query(Book).filter(Book.book_id == book_id).first()
+            patron = (
+                self.db.query(Patron)
+                .filter(Patron.patron_id == patron_id)
+                .first()
+            )
+            book = (
+                self.db.query(Book)
+                .filter(Book.book_id == book_id)
+                .first()
+            )
 
-            if patron and book:
-                message_body = NotificationTemplates.WAITLIST_ADDED.format(
-                    title=book.title
+            if not patron:
+                raise HTTPException(status_code=404, detail="Patron not found")
+
+            if not book:
+                raise HTTPException(status_code=404, detail="Book not found")
+
+            message_body = NotificationTemplates.WAITLIST_ADDED.format(
+                title=book.title
+            )
+
+            notification = Notification(
+                patron_id=patron_id,
+                contents=message_body,
+            )
+            self.db.add(notification)
+
+            if patron.email and os.getenv("TESTING") != "1":
+                send_email_notification(
+                    to_email=patron.email,
+                    subject="Library: Added to Waitlist",
+                    message=message_body,
                 )
 
-                notification = Notification(
-                    patron_id=patron_id,
-                    contents=message_body
-                )
-                self.db.add(notification)
+            self.db.commit()
+            self.db.refresh(new_waitlist)
+            return new_waitlist
 
-                if patron.email:
-                    send_email_notification(
-                        to_email=patron.email,
-                        subject="Library: Added to Waitlist",
-                        message=message_body
-                    )
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Patron is already in waitlist for this book",
+            )
 
-                    self.db.commit()
-                    self.db.refresh(new_waitlist)
-                    return new_waitlist
-                
+        except HTTPException:
+            self.db.rollback()
+            raise
+
         except Exception:
             self.db.rollback()
             raise
@@ -85,7 +108,6 @@ class WaitlistService:
     def issue_book_from_waitlist(self, book_id: int):
         try:
             with self.db.begin():
-
                 inventory = (
                     self.db.query(BookCopy)
                     .filter(BookCopy.book_id == book_id)
@@ -96,7 +118,7 @@ class WaitlistService:
                 if not inventory or inventory.available < 1:
                     raise HTTPException(
                         status_code=409,
-                        detail="No available copies of this book"
+                        detail="No available copies of this book",
                     )
 
                 first_waiter = (
@@ -110,48 +132,50 @@ class WaitlistService:
                 if not first_waiter:
                     raise HTTPException(
                         status_code=404,
-                        detail="Waitlist is empty"
+                        detail="Waitlist is empty",
                     )
 
                 checkout = Checkout(
                     patron_id=first_waiter.patron_id,
                     book_copy_id=inventory.book_copy_id,
-                    end_time=datetime.now()
+                    end_time=datetime.now(UTC),
                 )
                 self.db.add(checkout)
 
                 inventory.available -= 1
-
                 self.db.delete(first_waiter)
 
-                patron = self.db.query(Patron).filter(Patron.patron_id == first_waiter.patron_id).first()
-                book_title = inventory.book.title if inventory.book else "Unknown Book"
-                if patron:
-    
-                    message_body = NotificationTemplates.BOOK_AVAILABLE.format(
-                        title=book_title
-                        )
+                patron = (
+                    self.db.query(Patron)
+                    .filter(Patron.patron_id == first_waiter.patron_id)
+                    .first()
+                )
 
-               
-                    notification = Notification(
-                        patron_id=first_waiter.patron_id,
-                        contents=message_body
-                    )
+                book_title = (
+                    inventory.book.title if inventory.book else "Unknown Book"
+                )
 
-                    self.db.add(notification)
+                message_body = NotificationTemplates.BOOK_AVAILABLE.format(
+                    title=book_title
+                )
 
-                
-                if patron.email:
+                notification = Notification(
+                    patron_id=first_waiter.patron_id,
+                    contents=message_body,
+                )
+                self.db.add(notification)
+
+                if patron and patron.email and os.getenv("TESTING") != "1":
                     send_email_notification(
                         to_email=patron.email,
                         subject="Library: Your book is ready!",
-                        message=message_body
+                        message=message_body,
                     )
 
-                self.db.add(notification)
-
-            self.db.commit()
             return checkout
+
+        except HTTPException:
+            raise
 
         except Exception:
             self.db.rollback()
