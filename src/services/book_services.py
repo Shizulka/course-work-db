@@ -1,80 +1,210 @@
-from fastapi import HTTPException
-from src.repositories.book_repository import BookRepository
-from src.repositories.waitlist_repository import WaitlistRepository # <-- ДОДАНО
-from src.repositories.copy_book_repository import BookCopyRepository
-from src.repositories.author_repository import AuthorRepository
-from src.repositories.genre_repository import GenreRepository
-from src.repositories.relations_repository import RelationsRepository
-from src.services.waitlist_services import WaitlistService # <-- ДОДАНО
-
-from src.models import Book, Author, Genre, BookCopy
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from src.schemas import BookCreateWithCopies
+from src.repositories.book_repository import BookRepository
+from src.models import Book, BookCopy, Author, Genre, Wishlist, Notification, Patron
+from src.templates import NotificationTemplates
+from src.send_email_notification import send_email_notification
 
 class BookService:
-    def __init__(
-        self,
-        db: Session,
-        repo: BookRepository,
-        waitlist_repo: WaitlistRepository = None,
-        book_copy_repo: BookCopyRepository = None,
-        author_repo: AuthorRepository = None,
-        genre_repo: GenreRepository = None,
-        relations_repo: RelationsRepository = None
-    ):
+    def __init__(self, db: Session, repo: BookRepository):
         self.db = db
         self.repo = repo
-        self.author_repo = author_repo or AuthorRepository(db)
-        self.genre_repo = genre_repo or GenreRepository(db)
-        self.relations_repo = relations_repo or RelationsRepository(db)
 
-        self.waitlist_repo = waitlist_repo or WaitlistRepository(db)
-        self.book_copy_repo = book_copy_repo or BookCopyRepository(db)
-        self.waitlist_service = WaitlistService(self.waitlist_repo, self.book_copy_repo)
+    def get_book_list(self):
+        book = self.repo.get_all
 
-    def add_new_inventory(self, book_id: int, quantity: int):
-
-        book = self.repo.get_by_id(book_id)
         if not book:
-            raise HTTPException(status_code=404, detail="Book not found.")
+            return []
+        return book
 
-        inventory = self.book_copy_repo.get_by_book_id(book_id)
+    
+    def fulfill_wishlist_for_book(self, book: Book):
+        book_author_names = {a.name.lower() for a in book.author}
 
-        if inventory:
-            inventory.copy_number += quantity
-            inventory.available += quantity
-            self.db.add(inventory)
-        else:
-            new_copy = BookCopy(
-                book_id=book_id,
+        wishlists = (
+            self.db.query(Wishlist)
+            .filter(
+                Wishlist.title == book.title,
+                Wishlist.language == book.language,
+                Wishlist.publisher == book.publisher,
+                Wishlist.year_published == book.year_published,
+            )
+            .all()
+        )
+
+        for w in wishlists:
+            if w.author:
+                wishlist_authors = {
+                    a.strip().lower()
+                    for a in w.author.split(",")
+                    if a.strip()
+                }
+
+                if wishlist_authors.isdisjoint(book_author_names):
+                    continue
+
+
+            message = NotificationTemplates.WISHLIST_FULFILLED.format(
+                title=book.title
+            )
+
+            self.db.add(Notification(
+                patron_id=w.patron_id,
+                contents=message
+            ))
+
+            patron = self.db.query(Patron).get(w.patron_id)
+            if patron and patron.email:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject=f"Library: '{book.title}' is now available",
+                    message=message
+                )
+
+            # заявка виконана
+            self.db.delete(w)
+
+    
+    def create_book_with_copies(
+        self,
+        title: str,
+        year_published: int,
+        pages: int,
+        publisher: str,
+        language: str,
+        price: int,
+        quantity: int,
+        authors: list[str],
+        genres: list[str]
+    ):
+        if pages <= 0:
+            raise HTTPException(400, "Pages must be > 0")
+        if price < 0:
+            raise HTTPException(400, "Price cannot be negative")
+        if not authors:
+            raise HTTPException(400, "At least one author required")
+        if not genres:
+            raise HTTPException(400, "At least one genre required")
+
+        try:
+            new_book = Book(
+                title=title,
+                year_published=year_published,
+                pages=pages,
+                publisher=publisher,
+                language=language,
+                price=price
+            )
+            self.db.add(new_book)
+            self.db.flush()
+
+            author_objs = []
+            for name in authors:
+                author = self.db.query(Author).filter_by(name=name).first()
+                if not author:
+                    author = Author(name=name)
+                    self.db.add(author)
+                    self.db.flush()
+                author_objs.append(author)
+
+            new_book.author = author_objs
+
+            genre_objs = []
+            for name in genres:
+                genre = self.db.query(Genre).filter_by(name=name).first()
+                if not genre:
+                    genre = Genre(name=name)
+                    self.db.add(genre)
+                    self.db.flush()
+                genre_objs.append(genre)
+
+            new_book.genre = genre_objs
+
+            copy = BookCopy(
+                book_id=new_book.book_id,
                 copy_number=quantity,
                 available=quantity
             )
-            self.db.add(new_copy)
+            self.db.add(copy)
 
-        self.db.commit()
-        self.db.refresh(book)
+            self.fulfill_wishlist_for_book(new_book)
 
-        issued_count = 0
+            self.db.commit()
+            self.db.refresh(new_book)
+            return new_book
 
-        for _ in range(quantity):
-            try:
-                self.waitlist_service.issue_book_from_waitlist(book_id)
-                issued_count += 1
-            except HTTPException as e:
-                if e.status_code == 404 or e.status_code == 409:
-                    break
-                raise
-            except Exception:
-                 self.db.rollback()
-                 raise
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(400, "This book already exists")
 
-        updated_inventory = self.book_copy_repo.get_by_book_id(book_id)
-        remaining_available = updated_inventory.available if updated_inventory else 0
 
-        return {
-            "message": f"Successfully added {quantity} copies of '{book.title}'.",
-            "issued_to_waitlist": issued_count,
-            "remaining_available": remaining_available
-        }
+    def create_book(
+        self,
+        title: str,
+        authors: list[str],
+        pages: int,
+        publisher: str,
+        language: str,
+        year_published: int,
+        genres: list[str],
+        price: int
+    ):
+        if pages <= 0:
+            raise HTTPException(status_code=400, detail="There must be more than 0 pages")
+
+        if price < 0:
+            raise HTTPException(status_code=400, detail="Price cannot be negative")
+
+        try:
+            new_book = Book(
+                title=title,
+                publisher=publisher,
+                language=language,
+                year_published=year_published,
+                pages=pages,
+                price=price
+            )
+            self.db.add(new_book)
+            self.db.flush()
+
+            author_objs = []
+            for name in authors:
+                author = (
+                    self.db.query(Author)
+                    .filter(Author.name == name)
+                    .first()
+                )
+                if not author:
+                    author = Author(name=name)
+                    self.db.add(author)
+                    self.db.flush()
+
+                author_objs.append(author)
+
+            new_book.author = author_objs
+
+            genre_objs = []
+            for name in genres:
+                genre = (
+                    self.db.query(Genre)
+                    .filter(Genre.name == name)
+                    .first()
+                )
+                if not genre:
+                    genre = Genre(name=name)
+                    self.db.add(genre)
+                    self.db.flush()
+
+                genre_objs.append(genre)
+
+            new_book.genre = genre_objs
+
+            self.db.commit()
+            self.db.refresh(new_book)
+            return new_book
+
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(status_code=400, detail="This book already exists")
