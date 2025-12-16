@@ -57,7 +57,12 @@ class CheckoutService:
                 checkout.status = "OK"
             
                 formatted_date = new_end_time.strftime("%d.%m.%Y")
-                message_body = NotificationTemplates.RENEWED.format(date=formatted_date)
+                book_title = checkout.book_copy.book.title
+
+                message_body = NotificationTemplates.RENEWED.format(
+                    title=book_title,
+                    date=formatted_date
+                )
 
                 notification = Notification(
                     patron_id=checkout.patron_id,
@@ -181,11 +186,20 @@ class CheckoutService:
 
                 self.db.delete(checkout)
 
-                message_body = NotificationTemplates.RETUTN
+                book_title = book_copy.book.title if book_copy.book else "Book"
+
+                message_body = NotificationTemplates.RETURN.format(
+                    title=book_title
+                )
 
                 patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
                 
                 book_title = book_copy.book.title if book_copy.book else "Book"
+
+                self.db.add(Notification(
+                    patron_id=patron_id,
+                    contents=message_body
+                ))
 
                 if patron and patron.email:
                     send_email_notification(
@@ -249,8 +263,15 @@ class CheckoutService:
             )
             self.db.add(new_checkout)
 
+            book_title = (
+                inventory_record.book.title
+                if inventory_record.book
+                else "the book"
+            )
+
             message_body = NotificationTemplates.BORROW.format(
-                formatted_date=end_time.strftime("%d.%m.%Y")
+                formatted_date=end_time.strftime("%d.%m.%Y"),
+                title=book_title
             )
 
             self.db.add(Notification(
