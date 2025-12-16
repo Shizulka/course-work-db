@@ -22,6 +22,7 @@ SELECT
 FROM book 
 	join book_copy ON book_copy.book_id=book.book_id
 WHERE  book.title = '1984'
+```
 
 ## 5. Складні аналітичні запити
 
@@ -29,7 +30,7 @@ WHERE  book.title = '1984'
 ### Запит №1: Перегляд топ-5 найактивніших користувачів
 
 Шлях -> src/services/analytics_service.py  ->  get_top_patrons
-```
+
 
 ```sql
 WITH patron_activity AS (
