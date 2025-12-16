@@ -1,9 +1,35 @@
+## 4. Прості SELECT-запити
+
+Пошук автора конкретної  книги 
+
+```sql
+SELECT 
+	book.title,
+	author.name
+FROM author
+	JOIN author_book ON author_book.author_id = author.author_id 
+	JOIN book ON author_book.book_id = book.book_id
+WHERE  book.title = 'Мотанка' 
+
+```
+Перевірка наявності примірників  конкретної книги
+
+```sql
+SELECT 
+	book.title,
+	book_copy.copy_number,
+	book_copy.available
+FROM book 
+	join book_copy ON book_copy.book_id=book.book_id
+WHERE  book.title = '1984'
+
 ## 5. Складні аналітичні запити
 
 
 ### Запит №1: Перегляд топ-5 найактивніших користувачів
 
 Шлях -> src/services/analytics_service.py  ->  get_top_patrons
+```
 
 ```sql
 WITH patron_activity AS (
