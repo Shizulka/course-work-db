@@ -10,3 +10,4 @@ env/
 src/send_email_notification.py
 .vscode/
 .idea/
+.coverage
