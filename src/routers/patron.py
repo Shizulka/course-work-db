@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.database import get_db
+from typing import Optional
 from src.repositories.patron_repository import PatronRepository
 from src.services.patron_services import PatronService
 
@@ -8,11 +9,27 @@ router = APIRouter(prefix="/patrons", tags=["Patrons"])
 
 
 def get_patron_service(db: Session = Depends(get_db)) -> PatronService:
-    repo = PatronRepository(db) 
-    service = PatronService(repo) 
+    repo = PatronRepository(db)
+    service = PatronService(repo)
     return service
 
 @router.post("/")
 def add_patron(first_name: str, last_name: str, email: str, phone_number: str , service: PatronService = Depends(get_patron_service)):
-    return service.create_patron(  first_name=first_name,  last_name=last_name,  email=email,  phone_number=phone_number) 
+    return service.create_patron(  first_name=first_name,  last_name=last_name,  email=email,  phone_number=phone_number)
 
+@router.patch("/{patron_id}")
+def update_patron(
+    patron_id: int,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    email: Optional[str] = None,
+    phone_number: Optional[str] = None,
+    service: PatronService = Depends(get_patron_service)
+):
+    return service.update_patron(
+        patron_id=patron_id,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        phone_number=phone_number
+    )
