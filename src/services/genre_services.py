@@ -9,7 +9,7 @@ class GenreService:
         self.db = db
 
     def get_genre_list(self):
-        genre = self.repo.get_all
+        genre = self.repo.get_all()
 
         if not genre:
             return []

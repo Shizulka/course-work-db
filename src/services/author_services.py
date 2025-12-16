@@ -9,7 +9,7 @@ class AuthorService:
         self.repo = repo
 
     def get_author_list(self):
-        author = self.repo.get_all
+        author = self.repo.get_all()
 
         if not author:
             return []
