@@ -1,7 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from src.schemas import BookCreateWithCopies
 from src.repositories.book_repository import BookRepository
 from src.models import Book, BookCopy, Author, Genre, Wishlist, Notification, Patron
 from src.templates import NotificationTemplates
@@ -63,7 +62,6 @@ class BookService:
                     message=message
                 )
 
-            # заявка виконана
             self.db.delete(w)
 
     
@@ -187,7 +185,20 @@ class BookService:
         except IntegrityError:
             self.db.rollback()
             raise HTTPException(status_code=400, detail="This book already exists")
+        
+    def update_book(self, book_id: int, updates: dict):
+        book = self.db.query(Book).filter(Book.book_id == book_id).first()
 
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+
+        for field, value in updates.items():
+            setattr(book, field, value)
+
+        self.db.commit()
+        self.db.refresh(book)
+        return book
+    
     def delate_book(self, book_id:int ):
           
         book= self.db.query(Book).filter(Book.book_id == book_id).first()
