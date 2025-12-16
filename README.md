@@ -26,3 +26,8 @@
 СПОВІЩЕННЯ НА ЕМЕЙЛ ПРИХОДЯТЬ ВИ ШО
 <img width="789" height="272" alt="image" src="https://github.com/user-attachments/assets/d50f2788-2284-4517-9101-bb0ad1679f06" />
 
+### 16.12.2025
+
+Зробили сотий коміт
+
+[Ми ніколи вас не підведемо](https://youtu.be/dQw4w9WgXcQ)
