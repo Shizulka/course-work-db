@@ -223,6 +223,9 @@ class CheckoutService:
         if not end_time:
             raise HTTPException(status_code=400, detail="End time is required")
 
+        if end_time.tzinfo is None:
+            end_time = end_time.replace(tzinfo=UTC)
+
         if end_time < datetime.now(UTC):
             raise HTTPException(status_code=400, detail="End time cannot be in the past")
 

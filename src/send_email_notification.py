@@ -1,13 +1,18 @@
-
+import os
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 
-
 def send_email_notification(to_email: str, subject: str, message: str):
-    sender_email = "yrina.lishuk2006@gmail.com" 
-    sender_password = "" 
+    if os.getenv("TESTING") == "1":
+        return
+    
+    sender_email = os.getenv("EMAIL_SENDER")
+    sender_password = os.getenv("EMAIL_PASSWORD")
+
+    if not sender_email or not sender_password:
+        raise RuntimeError("Email credentials not set")
     
     msg = MIMEMultipart()
     msg['From'] = sender_email
