@@ -15,18 +15,13 @@ def get_book_service(
     service = BookService(db, repo)
     return service
 
+@router.post("/delete")
+def delate_book(book_id:int, service: BookService = Depends(get_book_service)):
+    return service.delate_book (book_id=book_id)
+
 @router.post("/batch", response_model=BookResponse)
-def create_book_batch(
-    title: str,
-    authors: List[str] = Query(...),
-    year_published: int = Query(...),
-    pages: int = Query(...),
-    publisher: str = Query(...),
-    language: str = Query(...),
-    genres: List[str] = Query(...),
-    price: int = Query(...),
-    quantity: int = Query(1),
-    service: BookService = Depends(get_book_service)
+def create_book_batch( title: str,  authors: List[str] = Query(...), year_published: int = Query(...), pages: int = Query(...), publisher: str = Query(...),
+    language: str = Query(...), genres: List[str] = Query(...), price: int = Query(...), quantity: int = Query(1), service: BookService = Depends(get_book_service)
 ):
     return service.create_book_with_copies(
         title=title,
@@ -41,16 +36,8 @@ def create_book_batch(
     )
 
 @router.post("/")
-def add_book(
-    title: str,
-    authors: List[str] = Query(...),
-    pages: int = Query(...),
-    publisher: str = Query(...),
-    language: str = Query(...),
-    year_published: int = Query(...),
-    genres: List[str] = Query(...),
-    price: int = Query(...),
-    service: BookService = Depends(get_book_service)
+def add_book( title: str, authors: List[str] = Query(...), pages: int = Query(...), publisher: str = Query(...), language: str = Query(...), year_published: int = Query(...),
+    genres: List[str] = Query(...), price: int = Query(...), service: BookService = Depends(get_book_service)
 ):
     return service.create_book(
         title=title,

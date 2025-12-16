@@ -67,18 +67,7 @@ class BookService:
             self.db.delete(w)
 
     
-    def create_book_with_copies(
-        self,
-        title: str,
-        year_published: int,
-        pages: int,
-        publisher: str,
-        language: str,
-        price: int,
-        quantity: int,
-        authors: list[str],
-        genres: list[str]
-    ):
+    def create_book_with_copies( self, title: str, year_published: int, pages: int, publisher: str, language: str, price: int, quantity: int,authors: list[str],genres: list[str] ):
         if pages <= 0:
             raise HTTPException(400, "Pages must be > 0")
         if price < 0:
@@ -140,17 +129,7 @@ class BookService:
             raise HTTPException(400, "This book already exists")
 
 
-    def create_book(
-        self,
-        title: str,
-        authors: list[str],
-        pages: int,
-        publisher: str,
-        language: str,
-        year_published: int,
-        genres: list[str],
-        price: int
-    ):
+    def create_book(self,title: str,authors: list[str],pages: int,publisher: str,language: str, year_published: int, genres: list[str], price: int):
         if pages <= 0:
             raise HTTPException(status_code=400, detail="There must be more than 0 pages")
 
@@ -208,3 +187,30 @@ class BookService:
         except IntegrityError:
             self.db.rollback()
             raise HTTPException(status_code=400, detail="This book already exists")
+
+    def delate_book(self, book_id:int ):
+          
+        book= self.db.query(Book).filter(Book.book_id == book_id).first()
+
+        if not book:
+            raise HTTPException(status_code=400, detail="Book not found")
+        
+        copies = self.db.query(BookCopy).filter(BookCopy.book_id == book_id).all()
+
+        deleted_book_title = book.title 
+        deleted_book_id = book.book_id
+
+        for book_copy in copies:
+            if book_copy.available != book_copy.copy_number:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Cannot delete book. Some copies are currently on loan (Available: {book_copy.available}, Total: {book_copy.copy_number})"
+                )
+            
+        self.db.query(BookCopy).filter(BookCopy.book_id == book_id).delete()
+  
+        self.db.delete(book)
+        self.db.commit()
+
+        return {"detail": f"Book '{deleted_book_title}' (ID: {deleted_book_id}) has been deleted permanently"}
+    
