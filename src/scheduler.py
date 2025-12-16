@@ -1,3 +1,4 @@
+import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from src.database import SessionLocal
 from src.repositories.checkout_repository import CheckoutRepository
@@ -15,10 +16,14 @@ def update_checkout_status_job():
         db.close()
 
 def start_scheduler():
+    if os.getenv("TESTING") == "1":
+        return
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         update_checkout_status_job,
         "interval",
-        minutes=1 #такий час виключно для швидкої демонстрації. для реального застосування краще використовувати шось типу 1-2 рази на день, за умови, що ми кінцевий термін будемо на один і той самий час ставити
+        minutes=1, #такий час виключно для швидкої демонстрації. для реального застосування краще використовувати шось типу 1-2 рази на день, за умови, що ми кінцевий термін будемо на один і той самий час ставити 
+        id="update_checkout_status_job",
+        replace_existing=True,
     )
     scheduler.start()

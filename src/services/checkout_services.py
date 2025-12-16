@@ -316,6 +316,9 @@ class CheckoutService:
         if not checkout.end_time:
             return
 
+        if checkout.end_time.tzinfo is None:
+            checkout.end_time = checkout.end_time.replace(tzinfo=UTC)
+
         now = datetime.now(UTC)
         old_status = checkout.status       
 
