@@ -28,7 +28,7 @@ def create_book_batch( title: str,  authors: List[str] = Query(...), year_publis
         publisher=publisher,language=language, genres=genres, price=price,quantity=quantity
     )
 
-@router.patch("/{book_id}")
+@router.patch("/update")
 def update_book_route( book_id: int, title: Optional[str] = Query(None), pages: Optional[int] = Query(None), publisher: Optional[str] = Query(None),
     language: Optional[str] = Query(None),year_published: Optional[int] = Query(None),price: Optional[int] = Query(None),service: BookService = Depends(get_book_service)
 ):

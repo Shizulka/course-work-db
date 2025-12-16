@@ -16,6 +16,19 @@ class PatronService:
     def get_patron_list(self):
         return self.repo.get_all() or []
 
+    def update_patron(self, patron_id: int, updates: dict):
+        patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+
+        if not patron:
+            raise HTTPException(status_code=404, detail="Patron not found")
+
+        for field, value in updates.items():
+            setattr(patron, field, value)
+
+        self.db.commit()
+        self.db.refresh(patron)
+        return patron
+
     def create_patron(
         self,
         first_name: str,
