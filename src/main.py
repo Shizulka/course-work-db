@@ -12,6 +12,7 @@ from src.routers import genre
 from src.routers import wishlist
 from src.routers import relations
 from src.routers import notification
+from src.routers import analytics
 from src.database import get_db
 
 app = FastAPI()
@@ -34,6 +35,7 @@ app.include_router(genre.router)
 app.include_router(wishlist.router)
 app.include_router(relations.router)
 app.include_router(notification.router)
+app.include_router(analytics.router)
 
 @app.get("/")
 def root():
