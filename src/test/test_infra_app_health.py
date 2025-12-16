@@ -5,7 +5,6 @@ from src.main import app
 
 
 def test_health_endpoint(monkeypatch, db_session: Session):
-    # Підміняємо get_db, щоб /health ходив в тестову сесію
     from src.database import get_db
 
     def override_get_db():

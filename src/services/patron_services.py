@@ -38,7 +38,7 @@ class PatronService:
             raise HTTPException(status_code=400, detail="Incorrect email format")
 
         try:
-            with self.db.begin():
+            with self.db.begin_nested():
                 new_patron = Patron(
                     first_name=first_name,
                     last_name=last_name,
