@@ -10,6 +10,7 @@ FROM author
 	JOIN author_book ON author_book.author_id = author.author_id 
 	JOIN book ON author_book.book_id = book.book_id
 WHERE  book.title = 'Мотанка' 
+LIMIT 5 OFFSET 0
 
 ```
 Перевірка наявності примірників  конкретної книги
