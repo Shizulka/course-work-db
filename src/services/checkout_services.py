@@ -19,70 +19,81 @@ class CheckoutService:
         self.book_copy_repo = book_copy_repo
         self.db: Session = repo.db
 
-    def renew_book(self, checkout_id : int):
+    def renew_book(self, checkout_id: int):
         try:
-            with self.db.begin():
-                checkout = (
-                    self.db.query(Checkout)
-                    .filter(Checkout.checkout_id == checkout_id)
-                    .with_for_update()
-                    .first()
+            checkout = (
+                self.db.query(Checkout)
+                .filter(Checkout.checkout_id == checkout_id)
+                .with_for_update()
+                .first()
+            )
+
+            if not checkout:
+                raise HTTPException(404, "Checkout record not found")
+
+            book_id = checkout.book_copy.book_id
+
+            waitlist_count = (
+                self.db.query(Waitlist)
+                .filter(Waitlist.book_id == book_id)
+                .count()
+            )
+
+            if waitlist_count > 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Cannot renew: Other patrons are waiting for this book."
                 )
 
-                if not checkout:
-                    raise HTTPException(status_code=404, detail="Checkout record not found")
-                
-                book_id = checkout.book_copy.book_id
-                waitlist_count = (
-                    self.db.query(Waitlist)
-                    .filter(Waitlist.book_id == book_id)
-                    .count()
+            now = datetime.now(UTC)
+
+            if checkout.end_time.tzinfo is None:
+                checkout_end = checkout.end_time.replace(tzinfo=UTC)
+            else:
+                checkout_end = checkout.end_time
+
+            if checkout_end < datetime.now(UTC):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot renew: The book is overdue."
                 )
 
-                if waitlist_count > 0:
-                    raise HTTPException(
-                        status_code=409, 
-                        detail="Cannot renew: Other patrons are waiting for this book."
-                    )
-                
-                if checkout.end_time < datetime.now(UTC):
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Cannot renew: The book is overdue. Please return it and pay the fine."
-                    )
-                
-                new_end_time = checkout.end_time + timedelta(days=7)
+            new_end_time = checkout.end_time + timedelta(days=7)
+            checkout.end_time = new_end_time
+            checkout.status = "OK"
 
-                checkout.end_time = new_end_time
-                checkout.status = "OK"
-            
-                formatted_date = new_end_time.strftime("%d.%m.%Y")
-                book_title = checkout.book_copy.book.title
+            formatted_date = new_end_time.strftime("%d.%m.%Y")
+            book_title = checkout.book_copy.book.title
 
-                message_body = NotificationTemplates.RENEWED.format(
-                    title=book_title,
-                    date=formatted_date
+            message_body = NotificationTemplates.RENEWED.format(
+                title=book_title,
+                date=formatted_date
+            )
+
+            self.db.add(Notification(
+                patron_id=checkout.patron_id,
+                contents=message_body
+            ))
+
+            patron = checkout.patron
+            if patron and patron.email:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject="Library: Book Renewed",
+                    message=message_body
                 )
 
-                notification = Notification(
-                    patron_id=checkout.patron_id,
-                    contents=message_body
-                )
-                self.db.add(notification)
+            self.db.commit()
 
-                patron = checkout.patron 
-                if patron and patron.email:
-                    send_email_notification(
-                        to_email=patron.email,
-                        subject="Library: Book Renewed",
-                        message=message_body
-                    )
+            return {
+                "message": message_body,
+                "new_due_date": formatted_date,
+            }
 
-                return {"message": message_body, "new_due_date": formatted_date}
-
-        except Exception as e:
+        except Exception:
             self.db.rollback()
-            raise e
+            raise
+
 
 
     def lost_book(self, patron_id: int, book_copy_id: int):
@@ -151,71 +162,52 @@ class CheckoutService:
 
     def return_book(self, patron_id: int, book_copy_id: int):
         try:
-            with self.db.begin():
-
-                checkout = (
-                    self.db.query(Checkout)
-                    .filter(
-                        Checkout.patron_id == patron_id,
-                        Checkout.book_copy_id == book_copy_id
-                    )
-                    .with_for_update()
-                    .first()
+            checkout = (
+                self.db.query(Checkout)
+                .filter(
+                    Checkout.patron_id == patron_id,
+                    Checkout.book_copy_id == book_copy_id,
                 )
+                .with_for_update()
+                .first()
+            )
 
-                if not checkout:
-                    raise HTTPException(
-                        status_code=404,
-                        detail="No record of issuance found"
-                    )
+            if not checkout:
+                raise HTTPException(404, "No record of issuance found")
 
-                book_copy = (
-                    self.db.query(BookCopy)
-                    .filter(BookCopy.book_copy_id == checkout.book_copy_id)
-                    .with_for_update()
-                    .first()
-                )
+            book_copy = (
+                self.db.query(BookCopy)
+                .filter(BookCopy.book_copy_id == checkout.book_copy_id)
+                .with_for_update()
+                .first()
+            )
 
-                if not book_copy:
-                    raise HTTPException(
-                        status_code=404,
-                        detail="No copy of the book found in the database"
-                    )
+            if not book_copy:
+                raise HTTPException(404, "No copy of the book found")
 
-                book_copy.available += 1
+            book_copy.available += 1
+            self.db.delete(checkout)
 
-                self.db.delete(checkout)
+            message_body = NotificationTemplates.RETURN.format(
+                title=book_copy.book.title if book_copy.book else "Book"
+            )
 
-                book_title = book_copy.book.title if book_copy.book else "Book"
+            self.db.add(Notification(
+                patron_id=patron_id,
+                contents=message_body
+            ))
 
-                message_body = NotificationTemplates.RETURN.format(
-                    title=book_title
-                )
+            self.db.commit()
 
-                patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
-                
-                book_title = book_copy.book.title if book_copy.book else "Book"
-
-                self.db.add(Notification(
-                    patron_id=patron_id,
-                    contents=message_body
-                ))
-
-                if patron and patron.email:
-                    send_email_notification(
-                        to_email=patron.email,
-                        subject=f"Library: Return Successful - {book_title}",
-                        message=message_body
-                    )
-
-                return {
-                    "message": message_body,
-                    "new_availability": book_copy.available
-                }
+            return {
+                "message": message_body,
+                "new_availability": book_copy.available,
+            }
 
         except Exception:
             self.db.rollback()
             raise
+
 
 
     def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):

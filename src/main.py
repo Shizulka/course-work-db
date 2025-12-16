@@ -5,10 +5,15 @@ from contextlib import asynccontextmanager
 from src.scheduler import start_scheduler
 from src.routers import books, patron, checkout, waitlist, copy_book, author, genre, wishlist, relations, notification, analytics
 from src.database import get_db, db_ping
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start_scheduler()
+    if os.getenv("ENV") != "test":
+        start_scheduler()
     yield
 
 app = FastAPI(lifespan=lifespan)
