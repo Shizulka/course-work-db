@@ -212,6 +212,12 @@ class CheckoutService:
 
     def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):
 
+        if not patron:
+            raise HTTPException(status_code=404, detail="Patron not found")
+    
+        if patron.status == "INACTIVE":
+            raise HTTPException(status_code=404, detail="Patron is  inactive")
+
         if not end_time:
             raise HTTPException(status_code=400, detail="End time is required")
 

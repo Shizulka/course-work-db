@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from src.repositories.wishlist_repository import WishlistRepository
-from src.models import Wishlist, Notification, Patron
+from src.models import Checkout, Wishlist, Notification, Patron
 from src.templates import NotificationTemplates
 from src.send_email_notification import send_email_notification
 
@@ -15,16 +15,36 @@ class WishlistService:
         return wishlist or []
 
     def get_wishlist_by_patron(self, patron_id: int):
-        wishlist = (
-            self.repo.db
-            .query(self.repo.model)
-            .filter(self.repo.model.patron_id == patron_id)
-            .all()
-        )
-        return wishlist or []
+        patron = (self.repo.db.query(self.repo.model).filter(self.repo.model.patron_id == patron_id).all() )
+
+        if not patron:
+            raise HTTPException(status_code=404,detail=f"Not found")
+       
+        return patron
     
     def create_wishlist(self, patron_id: int, title: str, author: str, publisher: str, language: str, year_published: int) :
-    
+        if not patron:
+            raise HTTPException(status_code=404, detail="Patron not found")
+        
+        if patron.status == "INACTIVE":
+            raise HTTPException(status_code=404, detail="Patron is  inactive")
+        
+        
+        active_checkouts = (
+            self.db.query(Checkout)
+            .filter(Checkout.patron_id == patron_id)
+            .all()
+        )
+        
+        for checkout in active_checkouts:
+            self._update_status(checkout)
+            if checkout.status == "Overdue":
+                raise HTTPException(
+                    status_code=403,
+                    detail="You cannot borrow new books until overdue items are returned."
+                )
+
+
         try:
             with self.db.begin():
 

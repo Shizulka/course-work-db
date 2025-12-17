@@ -63,6 +63,86 @@ src/
 
 ```
 
+## ER діаграма проєкту
+
+потім вставлю
+
+## Опис API Ендпоінтів
+
+### Books
+
+**POST /books/** - Додавання нової книги
+
+**GET /books/** - Перегляд всіх книг
+
+**PATCH /books/update** - Оновлення книги
+
+**POST /books/batch** - Створення нової книги разом з кількістю авторами та жанрами
+
+**POST /books/delete** - Видалення книги
+
+### Patrons
+
+**POST /patrons/** - Додавання нового патрону
+
+**POST /patrons/soft_delete** - "М'яке" видалення патрона з системи , з шансом повернутися назад через 6 місяців , якщо ні видаляється патрон повністю
+
+**POST/patrons/activate** - Відновлення аккаунта патрону після м'якого видалення
+
+### Checkout
+
+**PUT/checkout/renew** - Поновлення дедлайну здачі книгі
+
+**POST/checkout/borrow** - Взяття книгі
+
+**POST/checkout/return** - Повернення книгі
+
+**POST/checkout/lost_book** - Звіт про втрату книгі + штраф
+
+**GET/checkout/** - Показ свіх позик книг
+
+### Waitlist
+
+**POST/waitlist/** - Додавання черги на книгу
+
+**POST/waitlist/issue** - Взяття книги з чергі очікування
+
+**GET/waitlist/position** - Показ позиції в черзі
+
+### Book-Copy
+
+**POST/book-copy/update** - Зміна загальної кількості книг
+
+**POST/book-copy/** - Додавання кількості книг
+
+**GET/book-copy/** - Показ всіх наявних копій
+
+### Author
+
+**POST/author/** - Створення автора
+
+### Genre
+
+**POST/genre/** - Створення жанру
+
+### Wishlist
+
+**POST/wishlist/** - Створення бажаної книги
+
+**GET/wishlist/** - Перегляд бажань
+
+### Relations
+
+**POST/relations/author-book** - Створення зв'язків між автор та книгой
+
+**POST/relations/genre-book** - Створення зв'язків між жанром і книгой
+
+### Notification
+
+**GET/notification/{patron_id}** - СПерегляд сповіщенням у одного патрона
+
+**GET/notification/** - Перегляд сповіщеннь всіх
+
 ### 11.12.2025
 
 Почали документацію,
