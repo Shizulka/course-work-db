@@ -16,3 +16,40 @@ def test_create_patron(db_session):
     assert patron.patron_id == patron_id
     assert patron.first_name == PATRON_1["first_name"]
     assert patron.last_name == PATRON_1["last_name"]
+
+def test_soft_delete_patron(db_session):
+    client = create_client(db_session)
+
+    patron_id = create_patron(client)
+
+    resp = client.post(
+        "/patrons/soft_delete",
+        params={"patron_id": patron_id},
+    )
+
+    assert resp.status_code == 200
+
+    patron = db_session.query(Patron).filter_by(patron_id=patron_id).one()
+    assert patron.status == "INACTIVE"
+    assert patron.inactivated_at is not None
+
+def test_activate_patron(db_session):
+    client = create_client(db_session)
+
+    patron_id = create_patron(client)
+
+    client.post(
+        "/patrons/soft_delete",
+        params={"patron_id": patron_id},
+    )
+
+    resp = client.post(
+        "/patrons/activate",
+        params={"patron_id": patron_id},
+    )
+
+    assert resp.status_code == 200
+
+    patron = db_session.query(Patron).filter_by(patron_id=patron_id).one()
+    assert patron.status == "ACTIVE"
+    assert patron.inactivated_at is None

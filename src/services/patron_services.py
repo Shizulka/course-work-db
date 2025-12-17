@@ -1,6 +1,6 @@
 import re
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timezone , timedelta
+from datetime import datetime, timedelta, UTC
 from fastapi import HTTPException
 
 from src.repositories.patron_repository import PatronRepository
@@ -19,7 +19,7 @@ class PatronService:
 
 
     def hard_delete_patron(self):
-        six_months_ago = datetime.utcnow() - timedelta(minutes=5)#повинно бути days=180 , але для здачі час менший 
+        six_months_ago = datetime.now(UTC) - timedelta(minutes=5)#повинно бути days=180 , але для здачі час менший 
 
         patron = ( self.db.query(Patron).filter(Patron.status == "INACTIVE",Patron.inactivated_at <= six_months_ago).all())
 
@@ -102,7 +102,7 @@ class PatronService:
         new_status = "INACTIVE"
 
         patron.status = new_status
-        patron.inactivated_at = datetime.utcnow()
+        patron.inactivated_at = datetime.now(UTC)
 
         message_body = NotificationTemplates.GOODBYE
 
