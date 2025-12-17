@@ -1,6 +1,6 @@
 ## 4. Прості SELECT-запити
 
-Пошук автора конкретної  книги 
+### Пошук автора конкретної  книги 
 
 ```sql
 SELECT 
@@ -13,7 +13,7 @@ WHERE  book.title = 'Мотанка'
 LIMIT 5 OFFSET 0
 
 ```
-Перевірка наявності примірників  конкретної книги
+### Перевірка наявності примірників  конкретної книги
 
 ```sql
 SELECT 
@@ -25,8 +25,39 @@ FROM book
 WHERE  book.title = '1984'
 ```
 
-## 5. Складні аналітичні запити
+### Нові надходження у певному жанрі
+```sql
+SELECT 
+  b.title,
+  b.year_published,
+  g.name
+FROM book b
+  JOIN book_genres bg ON bg.book_id = b.book_id
+  JOIN genre g ON  bg.genre_id = g.genre_id
+WHERE g.name = 'Зарубіжне'
+ORDER BY year_published DESC
+LIMIT 5 OFFSET 0;
+```
 
+### Історія читача
+```sql
+SELECT
+ p.first_name,
+ p.last_name,
+ c.start_time,
+ c.end_time,
+ b.title 
+FROM patron p
+  JOIN checkout c ON c.patron_id = p.patron_id
+  JOIN book_copy bc ON c.book_copy_id = bc.book_copy_id
+  JOIN book b ON b.book_id =  bc.book_id
+WHERE p.email = 'tamanegichu@tuta.io'
+```
+
+---
+---
+
+## 5. Складні аналітичні запити
 
 ### Запит №1: Перегляд топ-5 найактивніших користувачів
 
