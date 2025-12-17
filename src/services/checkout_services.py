@@ -212,6 +212,8 @@ class CheckoutService:
 
     def create_checkout(self, book_id: int, patron_id: int, end_time: datetime):
 
+        patron = self.db.query(Patron).filter_by(patron_id=patron_id).first()
+
         if not patron:
             raise HTTPException(status_code=404, detail="Patron not found")
     
