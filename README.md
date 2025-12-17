@@ -238,7 +238,7 @@ URL: /patrons/5/soft_delete
 
 ## ER діаграма проєкту
 
-потім вставлю
+<img width="1584" height="1348" alt="ED" src="https://github.com/user-attachments/assets/c5c331a8-84e7-45e8-8ee2-8d77eb6193c1" />
 
 ## Опис API Ендпоінтів
 
