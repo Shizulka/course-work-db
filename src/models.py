@@ -93,7 +93,17 @@ class Patron(Base):
     last_name: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(100), nullable=False)
     phone_number: Mapped[Optional[str]] = mapped_column(String(50))
-    status: Mapped[str] = mapped_column(Enum('ACTIVE', 'INACTIVE', 'BAN', name=' tatus_type_for_patron'), nullable=False, server_default=text("'OK':: status_type_for_patron"))
+    status: Mapped[str] = mapped_column(
+        Enum(
+            "ACTIVE",
+            "INACTIVE",
+            "BAN",
+            name="status_type_for_patron",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default="ACTIVE",
+    )
     inactivated_at = Column(DateTime, nullable=True)
     
     notification: Mapped[list['Notification']] = relationship('Notification', back_populates='patron')
@@ -207,7 +217,17 @@ class Checkout(Base):
 
     checkout_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     start_time: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    status: Mapped[str] = mapped_column(Enum('Overdue', 'Soon', 'OK', name='status_type'), nullable=False, server_default=text("'OK'::status_type"))
+    status: Mapped[str] = mapped_column(
+        Enum(
+            "Overdue",
+            "Soon",
+            "OK",
+            name="status_type",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default="OK",
+    )
     book_copy_id: Mapped[int] = mapped_column(Integer)
     patron_id: Mapped[int] = mapped_column(Integer)
     end_time: Mapped[datetime.datetime] = mapped_column(DateTime)
