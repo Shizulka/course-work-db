@@ -1,6 +1,7 @@
 import re
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone , timedelta
+from fastapi import HTTPException
 
 from src.repositories.patron_repository import PatronRepository
 from src.models import Patron, Notification ,Waitlist , Wishlist ,Checkout
