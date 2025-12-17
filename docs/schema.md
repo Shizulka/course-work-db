@@ -1,94 +1,122 @@
-
-##  Перелік таблиць та обмежень схеми 
-
----
-
-### AUTHOR – зберігає авторів 
-
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| author_id | integer **PK** | Унікальний ID автора  |
-| name | varchar(50) | Імʼя автора  |
+## Перелік таблиць та обмежень схеми
 
 ---
 
-###  BOOK – зберігає книги 
+### AUTHOR – зберігає авторів
 
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| book_id | integer **PK** | Унікальний ID книги  |
-| title | varchar(255) | Назва  |
-| author_id | integer **PK** | ID автора – **зовнішній ключ**, що посилається на `Author(author_id)` |
-| genre_id | varchar(255) | ID жанру – **зовнішній ключ**, що посилається на `Genre(genre_id)`  |
-| language | varchar(255) | Мова |
-| year_published | integer | Рік видання |
-| pages | integer | К-сть сторінок (**>0**) |
-| publisher | varchar(255) | Назва видавництва | 
-| price | integer | Ціна книги |
+| Поле      | Тип            | Опис                 |
+| :-------- | :------------- | :------------------- |
+| author_id | integer **PK** | Унікальний ID автора |
+| name      | varchar(50)    | Імʼя автора          |
 
 ---
 
-###  BOOK_COPY – зберігає окремі екземпляри книг 
+### BOOK – зберігає книги
 
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| book_copy_id | integer (**PK**) | ID копії  |
-| book_id | integer (**FK → book**) |ID книги – **зовнішній ключ**, що посилається на `Book(book_id)` |
-| copy_number | varchar(255) | Кількість копій  |
-
----
-
-###  GENRE – зберігає жанри книг 
-
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| genre_id | integer (**PK**) | ID жанру  |
-| name | varchar(100) **UNIQUE** | Назва жанру  |
+| Поле           | Тип            | Опис                                                                  |
+| :------------- | :------------- | :-------------------------------------------------------------------- |
+| book_id        | integer **PK** | Унікальний ID книги                                                   |
+| title          | varchar(255)   | Назва                                                                 |
+| author_id      | integer **PK** | ID автора – **зовнішній ключ**, що посилається на `Author(author_id)` |
+| genre_id       | varchar(255)   | ID жанру – **зовнішній ключ**, що посилається на `Genre(genre_id)`    |
+| language       | varchar(255)   | Мова                                                                  |
+| year_published | integer        | Рік видання                                                           |
+| pages          | integer        | К-сть сторінок (**>0**)                                               |
+| publisher      | varchar(255)   | Назва видавництва                                                     |
+| price          | integer        | Ціна книги                                                            |
 
 ---
 
-### PATRON – зберігає користувачів 
+### BOOK_COPY – зберігає окремі екземпляри книг
 
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| patron_id | integer (**PK**) | ID користувача |
-| first_name | varchar(50) | Ім’я |
-| last_name | varchar(50) | Прізвище |
-| email | varchar(100) **UNIQUE** | Email |
-| phone_number | varchar(50) | Телефон |
+| Поле         | Тип                     | Опис                                                             |
+| :----------- | :---------------------- | :--------------------------------------------------------------- |
+| book_copy_id | integer (**PK**)        | ID копії                                                         |
+| book_id      | integer (**FK → book**) | ID книги – **зовнішній ключ**, що посилається на `Book(book_id)` |
+| copy_number  | varchar(255)            | Кількість копій                                                  |
+| available    | varchar(255)            | Кількість копій                                                  |
+
+---
+
+### GENRE – зберігає жанри книг
+
+| Поле     | Тип                     | Опис        |
+| :------- | :---------------------- | :---------- |
+| genre_id | integer (**PK**)        | ID жанру    |
+| name     | varchar(100) **UNIQUE** | Назва жанру |
+
+---
+
+### PATRON – зберігає користувачів
+
+| Поле           | Тип                                                                                                                                   | Опис             |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
+| patron_id      | integer (**PK**)                                                                                                                      | ID користувача   |
+| first_name     | varchar(50)                                                                                                                           | Ім’я             |
+| last_name      | varchar(50)                                                                                                                           | Прізвище         |
+| email          | varchar(100) **UNIQUE**                                                                                                               | Email            |
+| phone_number   | varchar(50)                                                                                                                           | Телефон          |
+| status         | Enum('ACTIVE', 'INACTIVE', 'BAN', name=' tatus_type_for_patron'), nullable=False server_default=text("'OK':: status_type_for_patron") | Статус патрона   |
+| inactivated_at | DateTime                                                                                                                              | Дата деактивації |
 
 ---
 
 ### CHECKOUT – реєстрація виданих книг
 
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| checkout_id | integer (**PK**) | ID видачі |
-| book_copy_id | integer (**FK → book_copy**) | ID копії – **зовнішній ключ**, що посилається на `Book_copy(book_copy_id)` |
-| patron_id | integer (**FK → patron**) | ID користувача – **зовнішній ключ**, що посилається на `Patron(patron_id)` |
-| start_time | timestamp (**DEFAULT now()**) | Дата початку видачі |
-| end_time | timestamp | Дата повернення |
-| sttus | enum | чи книга на руках |
+| Поле         | Тип                                               | Опис                                                                       |
+| :----------- | :------------------------------------------------ | :------------------------------------------------------------------------- |
+| checkout_id  | integer (**PK**)                                  | ID видачі                                                                  |
+| book_copy_id | integer (**FK → book_copy**)                      | ID копії – **зовнішній ключ**, що посилається на `Book_copy(book_copy_id)` |
+| patron_id    | integer (**FK → patron**)                         | ID користувача – **зовнішній ключ**, що посилається на `Patron(patron_id)` |
+| start_time   | timestamp (**DEFAULT now()**)                     | Дата початку видачі                                                        |
+| end_time     | timestamp                                         | Дата повернення                                                            |
+| status       | Enum('Overdue', 'Soon', 'OK', name='status_type') | статус заборгованості                                                      |
 
 ---
 
-### NOTIFICATION – зберігає сповіщення 
+### NOTIFICATION – зберігає сповіщення
 
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| notification_id | integer (**PK**) | ID сповіщення  |
-| patron_id | integer (**FK → patron**) | ID користувача – **зовнішній ключ**, що посилається на `Patron(patron_id)` |
-| contents | text | [cite_start]Текст повідомлення |
-
----
-
-### WAITLIST – зберігає чергу очікування 
-| Поле | Тип | Опис |
-| :--- | :--- | :--- |
-| waitlist_id | integer (**PK**) | ID запису |
-| patron_id | integer (**FK → patron**) | ID користувача – **зовнішній ключ**, що посилається на `Patron(patron_id)` |
-| book_id | integer (**FK → book**) | ID книги – **зовнішній ключ**, що посилається на `Book(book_id)` |
+| Поле            | Тип                                   | Опис                                                                       |
+| :-------------- | :------------------------------------ | :------------------------------------------------------------------------- |
+| notification_id | integer (**PK**)                      | ID сповіщення                                                              |
+| patron_id       | integer (**FK → patron**)             | ID користувача – **зовнішній ключ**, що посилається на `Patron(patron_id)` |
+| contents        | text                                  | Текст повідомлення                                                         |
+| created_at      | datetime.datetime 'CURRENT_TIMESTAMP' | Дата створення                                                             |
 
 ---
 
+### WAITLIST – зберігає чергу очікування
 
+| Поле        | Тип                       | Опис                                                                       |
+| :---------- | :------------------------ | :------------------------------------------------------------------------- |
+| waitlist_id | integer (**PK**)          | ID запису                                                                  |
+| patron_id   | integer (**FK → patron**) | ID користувача – **зовнішній ключ**, що посилається на `Patron(patron_id)` |
+| book_id     | integer (**FK → book**)   | ID книги – **зовнішній ключ**, що посилається на `Book(book_id)`           |
+
+---
+
+### Wishlist - зберігає список бажаного
+
+| Поле           | Тип                         | Опис                  |
+| :------------- | :-------------------------- | :-------------------- | --------------------------------------------------------------------- |
+| patron_id      | integer (FK → patron)       |                       | I D користувача – зовнішній ключ, що посилається на Patron(patron_id) |
+| title          | String(255)                 | Назва бажної книги    |
+| author         | String(255)                 | Назва бажоного автора |
+| language       | String(255)                 | Бажана мова           |
+| publisher      | String(50)                  | Бажаний видавництво   |
+| year_published | Integer                     | Бажаний рік           |
+| added_date     | DateTime'CURRENT_TIMESTAMP' | Коли створено         |
+
+### t_author_book
+
+| Поле      | Тип     | Опис                                                      |
+| :-------- | :------ | :-------------------------------------------------------- |
+| author_id | Integer | I D – зовнішній ключ, що посилається на Patron(author_id) |
+| book_id   | Integer | I D – зовнішній ключ, що посилається на Patron(book_id)   |
+
+### t_book_genres
+
+| Поле     | Тип     | Опис                                                      |
+| :------- | :------ | :-------------------------------------------------------- |
+| book_id  | Integer | I D – зовнішній ключ, що посилається на Patron(book_id)   |
+| genre_id | Integer | I D – зовнішній ключ, що посилається на Patron(genre_id ) |
