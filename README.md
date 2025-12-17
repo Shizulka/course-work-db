@@ -161,14 +161,40 @@ src/
 ├── .env                           # Паролі  почти та бази данних
 ├── routers/                       # Обробка HTTP запитів
 │   ├── books.py
-│   └── patrons.py
-└── services/                      # Бізнес-логіка
-    ├── book_service.py
-    └── patron_service.py
-    repositories/                  # Шар доступу до даних
+│   ├── patrons.py
+│   ├── analytics.py
+│   ├── author.py
+│   ├── checkout.py
+│   ├── copy_book.py
+│   ├── genre.py
+│   ├── notification.py
+│   ├── relations.py
+│   ├── waitlist.py
+│   └── wishlist.py
+├── services/                      # Бізнес-логіка
+│   ├── book_service.py
+│   ├── patron_service.py
+│   ├── analytics_service.py
+│   ├── author_services.py
+│   ├── checkout_services.py
+│   ├── copy_book_services.py
+│   ├── genre_services.py
+│   ├── notification_services.py
+│   ├── relations_services.py
+│   ├── waitlist_services.py
+│   └── wishlist_services.py
+└──repositories/                  # Шар доступу до даних
     ├── ult_repository.py          # Базовий репозиторій для всіх репо , окрім нижче зазначенних
-    └── relations_repository.py    # Базовий репозиторій класс для таблиць багто до батьох
-
+    ├── relations_repository.py    # Базовий репозиторій класс для таблиць багто до батьох
+    ├── author_repository.py
+    ├── book_repository.py
+    ├── checkout_repository.py
+    ├── copy_book_repository.py
+    ├── genre_repository.py
+    ├── notification_repository.py
+    ├── patron_repository.py
+    ├── waitlist_repository.py
+    └── wishlist_repository.py
 ```
 
 #### Призначення основних модулів
@@ -382,7 +408,3 @@ URL: /waitlist/
 Зробили сотий коміт
 
 [Ми ніколи вас не підведемо](https://youtu.be/dQw4w9WgXcQ)
-
-```
-
-```
