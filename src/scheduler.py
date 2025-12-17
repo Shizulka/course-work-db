@@ -29,7 +29,7 @@ def delete_inactiv_patron():
         db.close() 
 
 def start_scheduler():
-    if os.getenv("TESTING") == "1":
+    if os.getenv("ENV") == "test":
         return
     
     scheduler.add_job(
