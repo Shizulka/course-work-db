@@ -4,6 +4,10 @@ from src.database import SessionLocal
 from src.repositories.checkout_repository import CheckoutRepository
 from src.repositories.copy_book_repository import BookCopyRepository
 from src.services.checkout_services import CheckoutService
+from src.services.patron_services import PatronService
+from src.repositories.patron_repository import PatronRepository
+
+scheduler = BackgroundScheduler()
 
 def update_checkout_status_job():
     db = SessionLocal()
@@ -15,10 +19,27 @@ def update_checkout_status_job():
     finally:
         db.close()
 
+def delete_inactiv_patron():
+    db = SessionLocal()
+    try:
+        repo = PatronRepository(db)
+        service = PatronService(repo)
+        service.hard_delete_patron()
+    finally:
+        db.close() 
+
 def start_scheduler():
     if os.getenv("TESTING") == "1":
         return
-    scheduler = BackgroundScheduler()
+    
+    scheduler.add_job(
+        delete_inactiv_patron,
+        "interval",
+        minutes=1,
+        id="delete_inactiv_patron",
+        replace_existing=True,
+    )
+
     scheduler.add_job(
         update_checkout_status_job,
         "interval",

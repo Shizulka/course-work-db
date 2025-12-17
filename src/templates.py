@@ -27,3 +27,13 @@ class NotificationTemplates:
         "Your account has been successfully created. "
         "You can now borrow books, join waitlists, and send wishlist requests."
     )
+
+    GOODBYE = ("Your account has been deleted."
+               "We appreciate all the time you spent with us."
+               "You can restore your account within 6 months.")
+
+    GOODBYE_AFTER = ("Your account has been permanently deleted." 
+                     "Thank you for spending time with us." 
+                     "This time, goodbye forever.")
+
+    RETURN = ("Welcome back, we are glad to see you again :)")

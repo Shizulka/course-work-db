@@ -1,12 +1,12 @@
 import re
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException
+from datetime import datetime, timezone , timedelta
 
 from src.repositories.patron_repository import PatronRepository
-from src.models import Patron, Notification
+from src.models import Patron, Notification ,Waitlist , Wishlist ,Checkout
 from src.templates import NotificationTemplates
 from src.send_email_notification import send_email_notification
-
+from src.templates import NotificationTemplates
 
 class PatronService:
     def __init__(self, repo: PatronRepository):
@@ -15,6 +15,115 @@ class PatronService:
 
     def get_patron_list(self):
         return self.repo.get_all() or []
+
+
+    def hard_delete_patron(self):
+        six_months_ago = datetime.utcnow() - timedelta(minutes=5)#повинно бути days=180 , але для здачі час менший 
+
+        patron = ( self.db.query(Patron).filter(Patron.status == "INACTIVE",Patron.inactivated_at <= six_months_ago).all())
+
+        message_body = NotificationTemplates.GOODBYE_AFTER
+
+        for patron in patron:
+            if patron.email:
+                try:
+                    send_email_notification(
+                        to_email=patron.email,
+                        subject="Library Account Permanently Deleted",
+                        message=NotificationTemplates.GOODBYE_AFTER
+                    )
+                except Exception as e:
+                    print(f"Could not send email to {patron.email}: {e}")
+
+            self.db.delete(patron)
+
+        self.db.commit()
+
+        return {"detail": f"Patrons has been deleted permanently"}
+
+
+    def activate_patron (self, patron_id: int):
+        patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+
+        if not patron:
+            raise HTTPException(status_code=404, detail="Patron not found")
+
+        if patron.status != "INACTIVE":
+            raise HTTPException(status_code=404, detail="Patron is not inactive")
+
+        patron.status = "ACTIVE"
+        patron.inactivated_at = None
+
+        message_body = NotificationTemplates.RETURN
+
+        self.db.add(Notification(
+            patron_id=patron.patron_id,
+            contents=message_body
+        ))
+
+        if patron.email:
+            try:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject="Library Account activated",
+                    message=message_body
+                )
+            except Exception as e:
+                print(f"Could not send email: {e}")
+
+        self.db.commit()
+        self.db.refresh(patron)
+
+        return {"detail": f"Patron  has been activated successfully"}
+
+
+    def soft_delete_patron (self, patron_id: int):
+        patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+
+        if not patron:
+            raise HTTPException(status_code=404, detail="Patron not found")
+
+        active_loans_count = (
+            self.db.query(Checkout)
+            .filter(Checkout.patron_id == patron_id)
+            .count()
+        )
+
+        if active_loans_count > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot deactivate patron. They still have {active_loans_count} active book loans."
+            )
+
+        self.db.query(Waitlist).filter(Waitlist.patron_id == patron_id).delete()
+        self.db.query(Wishlist).filter(Wishlist.patron_id == patron_id).delete()
+
+        new_status = "INACTIVE"
+
+        patron.status = new_status
+        patron.inactivated_at = datetime.utcnow()
+
+        message_body = NotificationTemplates.GOODBYE
+
+        self.db.add(Notification(
+            patron_id=patron.patron_id,
+            contents=message_body
+        ))
+
+        if patron.email:
+            try:
+                send_email_notification(
+                    to_email=patron.email,
+                    subject="Library Account Deactivated",
+                    message=message_body
+                )
+            except Exception as e:
+                print(f"Could not send email: {e}")
+
+        self.db.commit()
+        self.db.refresh(patron)
+
+        return {"detail": f"Patron  has been deactivated successfully"}
 
     def update_patron(self, patron_id: int, updates: dict):
         patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()

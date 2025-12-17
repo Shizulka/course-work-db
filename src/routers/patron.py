@@ -17,6 +17,14 @@ def get_patron_service(db: Session = Depends(get_db)) -> PatronService:
 def add_patron(first_name: str, last_name: str, email: str, phone_number: str , service: PatronService = Depends(get_patron_service)):
     return service.create_patron(  first_name=first_name,  last_name=last_name,  email=email,  phone_number=phone_number) 
 
+@router.post("/soft_delete")
+def soft_delete_patron( patron_id: int ,service: PatronService = Depends(get_patron_service)):
+    return service.soft_delete_patron(patron_id=patron_id)
+
+@router.post("/activate")
+def activate_patron (patron_id : int ,service: PatronService = Depends(get_patron_service)):
+    return service.activate_patron(patron_id=patron_id)
+
 @router.patch("/update")
 def update_patron_route( patron_id: int, first_name: Optional[str] = Query(None) , last_name :Optional[str] = Query(None) , email :Optional[str] = Query(None) ,
         phone_number : Optional[str] = Query(None)  ,service: PatronService = Depends(get_patron_service)):

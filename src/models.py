@@ -93,7 +93,9 @@ class Patron(Base):
     last_name: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(100), nullable=False)
     phone_number: Mapped[Optional[str]] = mapped_column(String(50))
-
+    status: Mapped[str] = mapped_column(Enum('ACTIVE', 'INACTIVE', 'BAN', name=' tatus_type_for_patron'), nullable=False, server_default=text("'OK':: status_type_for_patron"))
+    inactivated_at = Column(DateTime, nullable=True)
+    
     notification: Mapped[list['Notification']] = relationship('Notification', back_populates='patron')
     waitlist: Mapped[list['Waitlist']] = relationship('Waitlist', back_populates='patron')
     wishlist: Mapped[list['Wishlist']] = relationship('Wishlist', back_populates='patron')
