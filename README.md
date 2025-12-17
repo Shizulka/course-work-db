@@ -236,6 +236,36 @@ URL: /patrons/5/soft_delete
 }
 ```
 
+**Сценарій 3:**
+Додавання до списку очікування (Join Waitlist)
+Якщо всі фізичні копії книги видані, користувач може стати в електронну чергу. Система перевіряє, чи не стоїть користувач вже в черзі на цю книгу, та фіксує час запиту.
+
+Метод: POST
+
+URL: /waitlist/
+
+Тіло запиту (Request Body):
+
+```JSON
+{
+  "patron_id": 5,
+  "book_id": 42
+}
+```
+
+Успішна відповідь (Response 201 Created):
+
+```JSON
+{
+"waitlist_id": 8,
+"patron_id": 5,
+"book_id": 42,
+"created_at": "2025-12-17T17:30:00",
+"detail": "Patron added to waitlist for book 'Dune'"
+}
+
+```
+
 ## ER діаграма проєкту
 
 <img width="1584" height="1348" alt="ED" src="https://github.com/user-attachments/assets/c5c331a8-84e7-45e8-8ee2-8d77eb6193c1" />
@@ -322,6 +352,8 @@ URL: /patrons/5/soft_delete
 
 ## Історія змін коротко
 
+**Ми це писали скоріше для себе що б розуміти прогресс роботи.**
+
 ### 11.12.2025
 
 Почали документацію,запихнули міграції,зробили models.py.
@@ -350,3 +382,7 @@ URL: /patrons/5/soft_delete
 Зробили сотий коміт
 
 [Ми ніколи вас не підведемо](https://youtu.be/dQw4w9WgXcQ)
+
+```
+
+```
