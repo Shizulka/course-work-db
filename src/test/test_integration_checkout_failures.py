@@ -1,58 +1,102 @@
-from datetime import datetime, timedelta, UTC
-from fastapi.testclient import TestClient
-from src.main import app
-from src.database import get_db
-from src.models import Book, BookCopy
-
-def override_get_db(db_session):
-    def _get_db():
-        yield db_session
-    return _get_db
+from src.models import Checkout
+from src.test.helpers import create_client, create_patron, create_book_batch, get_book_copy, iso_end_time_in, PATRON_2
 
 def test_borrow_fails_when_no_available_copies(db_session):
-    app.dependency_overrides[get_db] = override_get_db(db_session)
-    client = TestClient(app)
+    client = create_client(db_session)
 
-    patron = client.post(
-        "/patrons/",
-        params={
-            "first_name": "Степан",
-            "last_name": "Степаненко",
-            "email": "stepanchyk@test.com",
-            "phone_number": "0991234567",
-        },
-    ).json()
+    patron_id = create_patron(client)
+    book_id = create_book_batch(client, db_session, quantity=1)
 
-    client.post(
-        "/books/batch",
-        params={
-            "title": "the book",
-            "authors": ["the author"],
-            "year_published": 2024,
-            "pages": 100,
-            "publisher": "test",
-            "language": "Українська",
-            "genres": ["test"],
-            "price": 100,
-            "quantity": 1,
-        },
-    )
-
-    book = db_session.query(Book).filter_by(title="the book").one()
-    copy = db_session.query(BookCopy).filter_by(book_id=book.book_id).one()
-
+    copy = get_book_copy(db_session, book_id)
     copy.available = 0
     db_session.flush()
-
-    end_time = datetime.now(UTC) + timedelta(days=7)
 
     resp = client.post(
         "/checkout/borrow",
         params={
-            "book_id": book.book_id,
-            "patron_id": patron["patron_id"],
-            "end_time": end_time.isoformat(),
+            "book_id": book_id,
+            "patron_id": patron_id,
+            "end_time": iso_end_time_in(7),
         },
     )
 
     assert resp.status_code == 409
+
+def test_renew_fails_when_checkout_not_found(db_session):
+    client = create_client(db_session)
+
+    resp = client.put(
+        "/checkout/renew",
+        params={"checkout_id": 999999},
+    )
+
+    assert resp.status_code == 404
+
+def test_renew_fails_when_waitlist_exists(db_session):
+    client = create_client(db_session)
+
+    patron1 = create_patron(client)
+    patron2 = create_patron(client, template=PATRON_2)
+
+    book_id = create_book_batch(client, db_session, quantity=1)
+
+    client.post(
+        "/checkout/borrow",
+        params={
+            "book_id": book_id,
+            "patron_id": patron1,
+            "end_time": iso_end_time_in(7),
+        },
+    )
+
+    client.post(
+        "/waitlist/",
+        params={
+            "book_id": book_id,
+            "patron_id": patron2,
+        },
+    )
+
+    checkout = (
+        db_session.query(Checkout)
+        .filter_by(patron_id=patron1)
+        .one()
+    )
+
+    resp = client.put(
+        "/checkout/renew",
+        params={"checkout_id": checkout.checkout_id},
+    )
+
+    assert resp.status_code == 409
+
+def test_return_fails_when_checkout_not_found(db_session):
+    client = create_client(db_session)
+
+    patron_id = create_patron(client)
+
+    resp = client.post(
+        "/checkout/return",
+        params={
+            "patron_id": patron_id,
+            "book_copy_id": 9999,
+        },
+    )
+
+    assert resp.status_code == 404
+
+def test_borrow_fails_when_book_not_found(db_session):
+    client = create_client(db_session)
+
+    patron_id = create_patron(client)
+
+    resp = client.post(
+        "/checkout/borrow",
+        params={
+            "book_id": 9999,
+            "patron_id": patron_id,
+            "end_time": iso_end_time_in(7),
+        },
+    )
+
+    assert resp.status_code == 404

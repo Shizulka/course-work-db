@@ -1,74 +1,37 @@
-from fastapi.testclient import TestClient
-from src.main import app
-from src.database import get_db
-
-def override_get_db(db_session):
-    def _get_db():
-        yield db_session
-    return _get_db
-
+from src.test.helpers import create_client, PATRON_1
 
 def test_create_patron_fails_invalid_email(db_session):
-    app.dependency_overrides[get_db] = override_get_db(db_session)
-    client = TestClient(app)
+    client = create_client(db_session)
 
-    resp = client.post(
-        "/patrons/",
-        params={
-            "first_name": "Степан",
-            "last_name": "Степаненко",
-            "email": "бі муві скрипт",
-            "phone_number": "0991234567",
-        },
-    )
+    bad = dict(PATRON_1)
+    bad["email"] = "бі муві скрипт"
 
+    resp = client.post("/patrons/", params=bad)
     assert resp.status_code == 400
 
 def test_create_patron_fails_invalid_phone_length(db_session):
-    app.dependency_overrides[get_db] = override_get_db(db_session)
-    client = TestClient(app)
+    client = create_client(db_session)
 
-    resp = client.post(
-        "/patrons/",
-        params={
-            "first_name": "Степан",
-            "last_name": "Степаненко",
-            "email": "stepanchyk@test.com",
-            "phone_number": "12345",
-        },
-    )
+    bad = dict(PATRON_1)
+    bad["phone_number"] = "12345"
 
+    resp = client.post("/patrons/", params=bad)
     assert resp.status_code == 400
 
 def test_create_patron_fails_phone_not_digits(db_session):
-    app.dependency_overrides[get_db] = override_get_db(db_session)
-    client = TestClient(app)
+    client = create_client(db_session)
 
-    resp = client.post(
-        "/patrons/",
-        params={
-            "first_name": "Степан",
-            "last_name": "Степаненко",
-            "email": "stepanchyk@test.com",
-            "phone_number": "09912abcde",
-        },
-    )
+    bad = dict(PATRON_1)
+    bad["phone_number"] = "09912abcde"
 
+    resp = client.post("/patrons/", params=bad)
     assert resp.status_code == 400
 
 def test_create_patron_fails_duplicate_email(db_session):
-    app.dependency_overrides[get_db] = override_get_db(db_session)
-    client = TestClient(app)
+    client = create_client(db_session)
 
-    params = {
-        "first_name": "Степан",
-        "last_name": "Степаненко",
-        "email": "stepanchyk@test.com",
-        "phone_number": "0991234567",
-    }
-
-    first = client.post("/patrons/", params=params)
+    first = client.post("/patrons/", params=PATRON_1)
     assert first.status_code == 200
 
-    second = client.post("/patrons/", params=params)
+    second = client.post("/patrons/", params=PATRON_1)
     assert second.status_code == 400

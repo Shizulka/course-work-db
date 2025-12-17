@@ -1,36 +1,18 @@
-from fastapi.testclient import TestClient
-from src.main import app
-from src.database import get_db
 from src.models import Patron
-
-def override_get_db(db_session):
-    def _get_db():
-        yield db_session
-    return _get_db
+from src.test.helpers import create_client, create_patron, PATRON_1
 
 
 def test_create_patron(db_session):
-    app.dependency_overrides[get_db] = override_get_db(db_session)
+    client = create_client(db_session)
 
-    client = TestClient(app)
-
-    resp = client.post(
-        "/patrons/",
-        params={
-            "first_name": "Степан",
-            "last_name": "Степаненко",
-            "email": "stepanchyk@test.com",
-            "phone_number": "0991234567",
-        },
-    )
-
-    assert resp.status_code == 200
+    patron_id = create_patron(client)
 
     patron = (
         db_session.query(Patron)
-        .filter_by(email="stepanchyk@test.com")
+        .filter_by(email=PATRON_1["email"])
         .one()
     )
 
-    assert patron.first_name == "Степан"
-    assert patron.last_name == "Степаненко"
+    assert patron.patron_id == patron_id
+    assert patron.first_name == PATRON_1["first_name"]
+    assert patron.last_name == PATRON_1["last_name"]

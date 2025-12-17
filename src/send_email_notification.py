@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 import smtplib
 
 def send_email_notification(to_email: str, subject: str, message: str):
-    if os.getenv("TESTING") == "1":
+    if os.getenv("ENV") == "test":
         return
     
     sender_email = os.getenv("EMAIL_SENDER")
