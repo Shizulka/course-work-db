@@ -30,6 +30,9 @@ class CheckoutService:
 
             if not checkout:
                 raise HTTPException(404, "Checkout record not found")
+            
+            if checkout.status == "Overdue":
+                raise HTTPException(404, "The term cannot be extended if the borrow  is overdue.")
 
             book_id = checkout.book_copy.book_id
 
@@ -134,10 +137,11 @@ class CheckoutService:
 
                 book_copy.copy_number -= 1
 
+                title = book.title
                 price = book.price
                 self.db.delete(checkout)
 
-                message_body = NotificationTemplates.FINE.format(price=price)
+                message_body = NotificationTemplates.FINE.format(price=price , title=title )
                 
                 notification = Notification(
                     patron_id=patron_id,

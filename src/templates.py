@@ -36,4 +36,4 @@ class NotificationTemplates:
                      "Thank you for spending time with us." 
                      "This time, goodbye forever.")
 
-    RETURN = ("Welcome back, we are glad to see you again :)")
+    BACK = ("Welcome back, we are glad to see you again :)")
