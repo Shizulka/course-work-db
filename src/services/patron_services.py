@@ -19,7 +19,7 @@ class PatronService:
 
 
     def hard_delete_patron(self):
-        six_months_ago = datetime.now(UTC) - timedelta(minutes=5)
+        six_months_ago = datetime.now(UTC) - timedelta(minutes=2)
 
         patron = ( self.db.query(Patron).filter(Patron.status == "INACTIVE",Patron.inactivated_at <= six_months_ago).all())
 
@@ -186,6 +186,8 @@ class PatronService:
                     message=message_body
                 )
 
+            self.db.commit()
+            self.db.refresh(new_patron)
             return {
                 "message": "Patron successfully registered",
                 "patron_id": new_patron.patron_id
