@@ -4,13 +4,15 @@ from src.database import get_db
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.services.waitlist_services import WaitlistService
 from src.repositories.copy_book_repository import BookCopyRepository
+from src.repositories.patron_repository import PatronRepository
 
 router = APIRouter(prefix="/waitlist", tags=["Waitlist"])
 
 def get_waitlist_service(db: Session = Depends(get_db)) -> WaitlistService:
     repo = WaitlistRepository(db) 
     book_copy_repo = BookCopyRepository(db)
-    service = WaitlistService(repo, book_copy_repo)
+    patron_repo=PatronRepository(db)
+    service = WaitlistService(repo, book_copy_repo, patron_repo)
     return service
 
 @router.post("/")

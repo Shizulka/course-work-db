@@ -5,15 +5,17 @@ from datetime import datetime, UTC
 
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.repositories.copy_book_repository import BookCopyRepository
+from src.repositories.patron_repository import PatronRepository
 from src.models import Book, Patron, Waitlist, Notification, Checkout, BookCopy 
 from src.templates import NotificationTemplates
 from src.send_email_notification import send_email_notification
 import os
 
 class WaitlistService:
-    def __init__(self, repo: WaitlistRepository, book_copy_repo: BookCopyRepository):
+    def __init__(self, repo: WaitlistRepository, book_copy_repo: BookCopyRepository, patron_repo: PatronRepository):
         self.repo = repo
         self.book_copy_repo = book_copy_repo
+        self.patron_repo = patron_repo
         self.db: Session = repo.db
 
     def get_waitlist_list(self):
@@ -33,6 +35,7 @@ class WaitlistService:
     def create_waitlist(self, book_id: int, patron_id: int):
         inventory = self.book_copy_repo.get_by_book_id(book_id)
 
+        patron = self.patron_repo.get_by_id(patron_id)
         if not patron:
             raise HTTPException(status_code=404, detail="Patron not found")
         
@@ -129,70 +132,72 @@ class WaitlistService:
 
     def issue_book_from_waitlist(self, book_id: int):
         try:
-            with self.db.begin():
-                inventory = (
-                    self.db.query(BookCopy)
-                    .filter(BookCopy.book_id == book_id)
-                    .with_for_update()
-                    .one_or_none()
+            inventory = (
+                self.db.query(BookCopy)
+                .filter(BookCopy.book_id == book_id)
+                .with_for_update()
+                .one_or_none()
+            )
+
+            if not inventory or inventory.available < 1:
+                raise HTTPException(
+                    status_code=409,
+                    detail="No available copies of this book",
                 )
 
-                if not inventory or inventory.available < 1:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="No available copies of this book",
-                    )
+            first_waiter = (
+                self.db.query(Waitlist)
+                .filter(Waitlist.book_id == book_id)
+                .order_by(Waitlist.created_at)
+                .with_for_update()
+                .first()
+            )
 
-                first_waiter = (
-                    self.db.query(Waitlist)
-                    .filter(Waitlist.book_id == book_id)
-                    .order_by(Waitlist.created_at)
-                    .with_for_update()
-                    .first()
+            if not first_waiter:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Waitlist is empty",
                 )
 
-                if not first_waiter:
-                    raise HTTPException(
-                        status_code=404,
-                        detail="Waitlist is empty",
-                    )
+            checkout = Checkout(
+                patron_id=first_waiter.patron_id,
+                book_copy_id=inventory.book_copy_id,
+                end_time=datetime.now(UTC),
+            )
 
-                checkout = Checkout(
-                    patron_id=first_waiter.patron_id,
-                    book_copy_id=inventory.book_copy_id,
-                    end_time=datetime.now(UTC),
+            self.db.add(checkout)
+            inventory.available -= 1
+            self.db.delete(first_waiter)
+
+            self.db.commit()
+            self.db.refresh(checkout)
+
+            patron = (
+                self.db.query(Patron)
+                .filter(Patron.patron_id == first_waiter.patron_id)
+                .first()
+            )
+
+            book_title = (
+                inventory.book.title if inventory.book else "Unknown Book"
+            )
+
+            message_body = NotificationTemplates.BOOK_AVAILABLE.format(
+                title=book_title
+            )
+
+            notification = Notification(
+                patron_id=first_waiter.patron_id,
+                contents=message_body,
+            )
+            self.db.add(notification)
+
+            if patron and patron.email and os.getenv("TESTING") != "1":
+                send_email_notification(
+                    to_email=patron.email,
+                    subject="Library: Your book is ready!",
+                    message=message_body,
                 )
-                self.db.add(checkout)
-
-                inventory.available -= 1
-                self.db.delete(first_waiter)
-
-                patron = (
-                    self.db.query(Patron)
-                    .filter(Patron.patron_id == first_waiter.patron_id)
-                    .first()
-                )
-
-                book_title = (
-                    inventory.book.title if inventory.book else "Unknown Book"
-                )
-
-                message_body = NotificationTemplates.BOOK_AVAILABLE.format(
-                    title=book_title
-                )
-
-                notification = Notification(
-                    patron_id=first_waiter.patron_id,
-                    contents=message_body,
-                )
-                self.db.add(notification)
-
-                if patron and patron.email and os.getenv("TESTING") != "1":
-                    send_email_notification(
-                        to_email=patron.email,
-                        subject="Library: Your book is ready!",
-                        message=message_body,
-                    )
 
             return checkout
 

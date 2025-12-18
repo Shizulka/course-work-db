@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from src.services.waitlist_services import WaitlistService
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.repositories.copy_book_repository import BookCopyRepository
+from src.repositories.patron_repository import PatronRepository
 
 from src.test.helpers import create_client, create_patron, create_book_batch
 
@@ -46,6 +47,7 @@ def test_issue_book_from_waitlist_fails_when_empty(db_session):
     service = WaitlistService(
         repo=WaitlistRepository(db_session),
         book_copy_repo=BookCopyRepository(db_session),
+        patron_repo=PatronRepository(db_session),
     )
 
     with pytest.raises(HTTPException):
