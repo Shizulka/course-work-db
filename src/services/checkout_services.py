@@ -200,6 +200,14 @@ class CheckoutService:
                 patron_id=patron_id,
                 contents=message_body
             ))
+            patron = self.db.query(Patron).filter(Patron.patron_id == patron_id).first()
+
+            if patron and patron.email:
+                send_email_notification(
+                to_email=patron.email,
+                subject="Library: Book returned",
+                message=message_body
+                )
 
             self.db.commit()
 
@@ -287,13 +295,14 @@ class CheckoutService:
             ))
 
             patron = self.db.query(Patron).filter_by(patron_id=patron_id).first()
+
             if patron and patron.email:
                 send_email_notification(
                     to_email=patron.email,
                     subject="Library: Borrowed book",
                     message=message_body
                 )
-
+            
             self.db.commit()
             return new_checkout
 
@@ -318,7 +327,7 @@ class CheckoutService:
         self.db.commit()
         return checkouts
 
-    def _update_status(self, checkout: Checkout) -> bool:
+    def _update_status(self,  checkout: Checkout) -> bool:
 
         if not checkout.end_time:
             return
@@ -328,14 +337,18 @@ class CheckoutService:
 
         now = datetime.now(UTC)
         old_status = checkout.status       
+    
+        book_title = "Book"
+        if checkout.book_copy and checkout.book_copy.book:
+            book_title = checkout.book_copy.book.title
 
         if now > checkout.end_time:
             new_status = "Overdue"
-            template = NotificationTemplates.OVERDUE
+            template = NotificationTemplates.OVERDUE.format(title=book_title)
             subject = "Library: Overdue book"
         elif checkout.end_time - now <= timedelta(days=3):
             new_status = "Soon"
-            template = NotificationTemplates.SOON
+            template = NotificationTemplates.SOON.format(title=book_title)
             subject = "Library: Return reminder"
         else:
             new_status = "OK"
@@ -345,7 +358,8 @@ class CheckoutService:
             return False
 
         checkout.status = new_status
-        
+        self.db.add(checkout)
+
         if template:
             notification = Notification(
                 patron_id=checkout.patron_id,

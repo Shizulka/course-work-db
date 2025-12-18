@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 
 from src.repositories.waitlist_repository import WaitlistRepository
 from src.repositories.copy_book_repository import BookCopyRepository
@@ -56,20 +56,23 @@ class WaitlistService:
                 detail="Book is available! You can checkout directly instead of joining waitlist.",
             )
         
-        active_checkouts = (
-            self.db.query(Checkout)
-            .filter(Checkout.patron_id == patron_id)
-            .all()
-        )
-        
-        for checkout in active_checkouts:
-            self._update_status(checkout)
-            if checkout.status == "Overdue":
-                raise HTTPException(
-                    status_code=403,
-                    detail="You cannot borrow new books until overdue items are returned."
-                )
 
+        has_overdue = (
+            self.db.query(Checkout)
+            .filter(
+                Checkout.patron_id == patron_id, 
+                Checkout.status == "Overdue"  
+            )
+            .first()
+        )
+
+        if has_overdue:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot join waitlist because you have overdue books."
+            )
+        
+        
         try:
             new_waitlist = Waitlist(
                 book_id=book_id,
@@ -158,12 +161,17 @@ class WaitlistService:
                     status_code=404,
                     detail="Waitlist is empty",
                 )
+            
 
+            loan_period = timedelta(days=14)
+            current_time = datetime.now(UTC)
+        
             checkout = Checkout(
                 patron_id=first_waiter.patron_id,
                 book_copy_id=inventory.book_copy_id,
-                end_time=datetime.now(UTC),
+                end_time=current_time + loan_period,
             )
+
 
             self.db.add(checkout)
             inventory.available -= 1

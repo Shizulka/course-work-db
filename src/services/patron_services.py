@@ -55,7 +55,7 @@ class PatronService:
         patron.status = "ACTIVE"
         patron.inactivated_at = None
 
-        message_body = NotificationTemplates.RETURN
+        message_body = NotificationTemplates.BACK
 
         self.db.add(Notification(
             patron_id=patron.patron_id,
